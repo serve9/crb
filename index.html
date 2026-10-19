@@ -1,0 +1,1921 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PLATAFORMA STREAM - RESELLERS</title>
+<!-- Firebase SDK para Firestore -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;800;900&family=Poppins:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg-dark: #050000;
+    --bg-panel: #0d0101;
+    --bg-card: #1a0202;
+    --accent-primary: #ff002b; 
+    --accent-secondary: #ff3333; 
+    --text-light: #ffffff;
+    --text-muted: #b38f8f;
+    --success: #00ff7f;
+    --warning: #ff8c00;
+    --info: #00e5ff;
+    --soles: #FCD535;
+    --border-radius: 12px;
+    --border-tech: 1px solid rgba(255, 0, 43, 0.2);
+    --sidebar-width: 260px;
+  }
+  
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0; padding: 0; 
+    background-color: var(--bg-dark);
+    background-image: radial-gradient(circle at top center, #1a0005 0%, #050000 100%);
+    color: var(--text-light); 
+    font-family: 'Poppins', sans-serif;
+    min-height: 100vh; width: 100vw; overflow-x: hidden;
+  }
+
+  /* ================= PANTALLA DE LOGIN / REGISTRO ================= */
+  #auth-screen {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 100vh; background: rgba(5, 0, 0, 0.9); z-index: 20000; position: relative; padding: 20px;
+  }
+  .auth-box {
+    background: var(--bg-panel); border: var(--border-tech); padding: 40px;
+    border-radius: 20px; width: 100%; max-width: 400px; box-shadow: 0 0 30px rgba(255,0,43,0.3);
+    text-align: center;
+  }
+  .auth-box h2 { font-family: 'Montserrat', sans-serif; color: var(--accent-secondary); margin-top: 0; }
+  .auth-tabs { display: flex; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+  .auth-tab { flex: 1; padding: 10px; cursor: pointer; color: var(--text-muted); font-weight: 600; transition: 0.3s; }
+  .auth-tab.active { color: var(--accent-primary); border-bottom: 2px solid var(--accent-primary); }
+
+  /* ================= ESTRUCTURA PRINCIPAL ================= */
+  #app-container { display: none; min-height: 100vh; width: 100vw; }
+
+  /* SIDEBAR FIJO (IZQUIERDA) */
+  .sidebar {
+    width: var(--sidebar-width); background: linear-gradient(180deg, #1a0202 0%, #050000 100%);
+    border-right: var(--border-tech); display: flex; flex-direction: column;
+    position: fixed; height: 100vh; left: 0; top: 0; z-index: 100;
+  }
+  
+  @keyframes floatLogo {
+    0% { transform: translateY(0px); filter: drop-shadow(0 0 5px var(--accent-primary)); }
+    50% { transform: translateY(-5px); filter: drop-shadow(0 0 15px var(--accent-secondary)); }
+    100% { transform: translateY(0px); filter: drop-shadow(0 0 5px var(--accent-primary)); }
+  }
+  
+  .sidebar-header { 
+      padding: 25px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); 
+      display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80px;
+  }
+  .sidebar-header h2 { font-family: 'Montserrat'; color: var(--accent-primary); font-size: 1.4rem; margin: 0; text-shadow: 0 0 10px rgba(255,0,43,0.5); }
+  .sidebar-header img { max-width: 150px; max-height: 60px; object-fit: contain; animation: floatLogo 4s ease-in-out infinite; display: none;}
+  
+  .sidebar-nav { flex-grow: 1; padding: 20px 0; list-style: none; margin: 0; overflow-y: auto;}
+  .sidebar-nav li {
+    padding: 15px 25px; color: var(--text-muted); font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; gap: 15px; border-left: 3px solid transparent; transition: 0.3s;
+  }
+  .sidebar-nav li:hover, .sidebar-nav li.active {
+    background: rgba(255,0,43,0.1); color: var(--text-light); border-left-color: var(--accent-primary);
+  }
+  .sidebar-nav li svg { width: 20px; height: 20px; stroke: currentColor; flex-shrink: 0; }
+
+  .sidebar-footer { padding: 20px; border-top: 1px solid rgba(255,255,255,0.05); }
+  .user-profile { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+  .user-avatar { width: 40px; height: 40px; background: var(--accent-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0; overflow:hidden;}
+  .user-avatar img { width:100%; height:100%; object-fit:cover; }
+  .user-info-text { display: flex; flex-direction: column; font-size: 0.85rem; overflow: hidden; }
+  .user-name { font-weight: 700; color: #fff; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;}
+  .user-email { color: var(--text-muted); font-size: 0.75rem; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;}
+
+  .btn-admin-sidebar {
+    background: transparent; border: 1px solid var(--warning); color: var(--warning);
+    width: 100%; padding: 8px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: bold; margin-bottom: 10px; transition: 0.3s;
+  }
+  .btn-admin-sidebar:hover { background: rgba(255,140,0,0.1); box-shadow: 0 0 10px rgba(255,140,0,0.3); }
+
+  .btn-logout { background: rgba(255,255,255,0.05); border: none; color: var(--text-light); width: 100%; padding: 8px; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+  .btn-logout:hover { background: rgba(255,255,255,0.1); }
+
+  /* CONTENIDO PRINCIPAL */
+  .main-content { margin-left: var(--sidebar-width); flex-grow: 1; padding: 30px; display: flex; flex-direction: column; position: relative; width: calc(100vw - var(--sidebar-width));}
+  
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; position: relative; width: 100%;}
+  
+  /* Logo Central Topbar */
+  .topbar-center-logo {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      max-width: 180px;
+      max-height: 60px;
+      object-fit: contain;
+      animation: floatLogo 4s ease-in-out infinite;
+      display: none;
+  }
+  
+  .balance-badge { background: var(--bg-card); border: var(--border-tech); padding: 10px 20px; border-radius: 30px; display: flex; flex-direction: column; gap: 2px; font-weight: bold; align-items: flex-end; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+  .balance-badge .currency { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; }
+  .balance-badge .amount { color: var(--success); font-size: 1.2rem; font-family: 'Montserrat'; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;}
+  
+  .panel { display: none; animation: fadeIn 0.4s ease; width: 100%;}
+  .panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  h1.panel-title { font-family: 'Montserrat'; font-weight: 800; font-size: 2rem; margin-top: 0; color: #fff; margin-bottom: 5px; }
+  .panel-subtitle { color: var(--text-muted); margin-bottom: 30px; }
+
+  /* ================= MENÚ PRINCIPAL (DASHBOARD) ================= */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 40px; }
+  .stat-card { background: var(--bg-card); border: var(--border-tech); padding: 25px; border-radius: var(--border-radius); display: flex; flex-direction: column; }
+  .stat-card .title { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 10px; }
+  .stat-card .value { font-family: 'Montserrat'; font-size: 2rem; font-weight: 800; color: #fff; }
+  .stat-card.highlight { background: linear-gradient(135deg, rgba(255,0,43,0.1) 0%, var(--bg-card) 100%); border-color: var(--accent-primary); }
+
+  /* ================= ELEMENTOS COMUNES ================= */
+  .grid-2-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .form-group { margin-bottom: 15px; text-align: left; }
+  .form-group label { display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 0.85rem; }
+  
+  input[type=number]::-webkit-inner-spin-button, 
+  input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+  input, select, textarea { width: 100%; padding: 12px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-family: 'Poppins'; outline: none; transition: 0.3s; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent-primary); box-shadow: 0 0 5px rgba(255,0,43,0.3); }
+
+  button.btn-primary { background: linear-gradient(135deg, var(--accent-primary), #99001a); border: none; color: #fff; padding: 12px 25px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.3s; font-family: 'Montserrat'; }
+  button.btn-primary:hover { box-shadow: 0 0 15px rgba(255,0,43,0.5); transform: translateY(-2px); }
+  button.btn-primary:disabled { background: #333; color: #888; cursor: not-allowed; box-shadow: none; border: 1px solid #444; }
+  button.btn-secondary { background: transparent; border: 1px solid var(--accent-primary); color: var(--accent-secondary); padding: 8px 15px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.3s; }
+  button.btn-secondary:hover { background: rgba(255,0,43,0.1); }
+  button.btn-success { background: rgba(0,255,127,0.2); border: 1px solid var(--success); color: var(--success); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+  
+  .btn-action { padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition:0.3s; }
+  .btn-action:hover { opacity: 0.8; transform: translateY(-1px); }
+  .btn-action.edit { background-color: #ff8c00; color: white; margin-right: 5px; margin-bottom: 5px; }
+  .btn-action.delete { background-color: var(--accent-primary); color: white; margin-bottom: 5px; }
+
+  /* TABLAS RESPONSIVAS */
+  .table-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; background: var(--bg-card); border: var(--border-tech); border-radius: var(--border-radius); padding: 20px; }
+  .table-container::-webkit-scrollbar { height: 6px; }
+  .table-container::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
+  .table-container::-webkit-scrollbar-thumb { background: var(--accent-primary); border-radius: 10px; }
+  
+  table { width: 100%; border-collapse: collapse; min-width: 600px; text-align: left; }
+  th { padding: 15px; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.05); white-space: nowrap; }
+  td { padding: 15px; font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: middle; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  
+  .badge { padding: 5px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; white-space: nowrap; }
+  .badge-active { background: rgba(0,255,127,0.1); color: var(--success); border: 1px solid rgba(0,255,127,0.3); }
+  .badge-warning { background: rgba(255,140,0,0.1); color: var(--warning); border: 1px solid rgba(255,140,0,0.3); }
+  .badge-expired { background: rgba(255,0,43,0.1); color: var(--accent-primary); border: 1px solid rgba(255,0,43,0.3); }
+  
+  .badge-tipo-perfil { background: rgba(142, 68, 173, 0.2); color: #d288ff; border: 1px solid rgba(142, 68, 173, 0.5); }
+  .badge-tipo-completa { background: rgba(41, 128, 185, 0.2); color: #64b5f6; border: 1px solid rgba(41, 128, 185, 0.5); }
+
+  /* STORE */
+  .categories-bar { display: flex; gap: 10px; margin-bottom: 25px; overflow-x: auto; padding-bottom: 10px; -webkit-overflow-scrolling: touch; }
+  .cat-btn { background: var(--bg-card); border: 1px solid rgba(255,255,255,0.1); padding: 12px 20px; border-radius: 12px; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; white-space: nowrap; transition: 0.3s; font-size: 0.9rem; }
+  .cat-btn.active { border-color: var(--accent-primary); background: rgba(255,0,43,0.1); color: var(--accent-secondary); }
+  
+  .catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+  .product-card { background: var(--bg-card); border: var(--border-tech); border-radius: var(--border-radius); padding: 15px; transition: 0.3s; display: flex; flex-direction: column; position: relative; }
+  .product-card:hover { border-color: var(--accent-secondary); transform: translateY(-5px); box-shadow: 0 10px 20px rgba(255,0,43,0.2); }
+  .product-card.sold-out { opacity: 0.6; filter: grayscale(80%); pointer-events: none; border-color: #555; }
+  .product-card img.prod-img { width: 100%; height: 140px; object-fit: cover; border-radius: 8px; margin-bottom: 15px; background: #000; }
+  .product-card .title { font-family: 'Montserrat'; font-weight: 800; font-size: 1.1rem; margin-bottom: 5px; line-height: 1.2; text-transform: uppercase; display:flex; flex-direction:column; gap:5px;}
+  .product-card .provider { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px; min-height: 40px; white-space: pre-wrap;}
+  .product-card .seller-tag { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; background: rgba(255,255,255,0.05); padding: 5px 10px; border-radius: 20px; width: fit-content;}
+  .product-card .seller-tag img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
+  .product-card .seller-tag span { font-size: 0.75rem; color: var(--success); font-weight: bold;}
+  .product-card .footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;}
+  .product-card .price { display: flex; flex-direction: column; gap: 2px; font-weight: bold; color: var(--success); font-size: 1.2rem; }
+  .stock-badge { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.8); color: var(--success); padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; border: 1px solid var(--success); z-index: 10;}
+  .stock-badge.empty { color: var(--accent-primary); border-color: var(--accent-primary); }
+
+  /* RECARGAS & ASISTENTE */
+  .recharge-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 30px; }
+  .recharge-box { background: var(--bg-card); border: var(--border-tech); border-radius: var(--border-radius); padding: 25px; text-align: center; }
+  .recharge-box h3 { margin-top: 0; color: #fff; font-family: 'Montserrat'; }
+  .qr-img { width: 160px; height: 160px; margin: 15px auto; display: block; border-radius: 12px; border: 2px solid var(--accent-primary); padding: 5px; background: #fff; }
+  
+  .ticket-card { background: var(--bg-panel); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; gap: 15px;}
+  .ticket-card .info h4 { margin: 0 0 5px 0; color: #fff; font-family: 'Montserrat'; display: flex; align-items: center; gap: 10px;}
+  .ticket-card .info p { margin: 0; font-size: 0.85rem; color: var(--text-muted); }
+  .ticket-card .actions { display: flex; gap: 10px; }
+
+  /* MODALES */
+  .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; z-index: 30000; padding: 15px;}
+  .modal-content { background: var(--bg-panel); border: var(--border-tech); padding: 30px; border-radius: 20px; width: 100%; max-width: 450px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.8); }
+
+  /* MÓVIL Y TABLET ADAPTATION */
+  @media (max-width: 900px) {
+    .sidebar { transform: translateX(-100%); transition: transform 0.3s ease-in-out; }
+    .sidebar.open { transform: translateX(0); }
+    .main-content { margin-left: 0; padding: 15px; width: 100vw; }
+    .btn-menu-mobile { display: block !important; background: transparent; border: none; color: #fff; font-size: 1.8rem; cursor: pointer; padding: 0 10px; }
+    .topbar-center-logo { display: none !important; }
+    .grid-2-col { grid-template-columns: 1fr; gap: 10px;}
+    .stats-grid { grid-template-columns: 1fr; }
+    .auth-box { padding: 25px; }
+    h1.panel-title { font-size: 1.6rem; }
+    .balance-badge { flex-direction: row; align-items: center; }
+    .ticket-card { flex-direction: column; align-items: flex-start; }
+    .ticket-card .actions { width: 100%; justify-content: flex-end; margin-top: 10px;}
+  }
+  .btn-menu-mobile { display: none; }
+</style>
+</head>
+<body>
+
+<!-- PANTALLA DE LOGIN / REGISTRO -->
+<div id="auth-screen">
+  <img id="login-logo" src="" style="max-width: 200px; margin-bottom: 20px; filter: drop-shadow(0 0 15px var(--accent-primary)); display:none;">
+  <h1 style="font-family: 'Montserrat'; color:#fff; text-shadow: 0 0 10px var(--accent-primary); margin-bottom: 30px; text-align: center; font-size: clamp(2rem, 5vw, 3rem);" id="login-title">PLATAFORMA STREAM</h1>
+  
+  <div class="auth-box">
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Iniciar Sesión</div>
+      <div class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Registrarse</div>
+    </div>
+
+    <div id="form-login">
+      <div class="form-group"><input type="text" id="login-user" placeholder="Usuario o Correo" onkeypress="handleEnter(event, iniciarSesion)"></div>
+      <div class="form-group"><input type="password" id="login-pass" placeholder="Contraseña" onkeypress="handleEnter(event, iniciarSesion)"></div>
+      <button class="btn-primary" style="width:100%; margin-top: 10px;" onclick="iniciarSesion()">Acceder al Panel</button>
+      
+      <!-- BOTÓN OCULTO PARA ADMIN -->
+      <div style="margin-top: 25px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+        <button class="btn-secondary" style="font-size: 0.8rem; width: 100%; border: none; color: var(--text-muted);" onclick="pedirPasswordAdmin()">🔑 Ingresar como Administrador</button>
+      </div>
+    </div>
+
+    <div id="form-register" style="display: none;">
+      <div class="form-group"><input type="text" id="reg-user" placeholder="Usuario (Ej: juan123)" onkeypress="handleEnter(event, registrarReseller)"></div>
+      <div class="form-group"><input type="email" id="reg-email" placeholder="Correo Electrónico" onkeypress="handleEnter(event, registrarReseller)"></div>
+      
+      <div class="form-group" style="text-align: left;">
+        <label>WhatsApp:</label>
+        <div style="display:flex; gap:10px;">
+          <select id="reg-cod-pais" style="width: 110px; font-weight:bold; flex-shrink:0;">
+            <option value="51">+51 (PE)</option>
+            <option value="591">+591 (BO)</option>
+            <option value="54">+54 (AR)</option>
+            <option value="56">+56 (CL)</option>
+            <option value="57">+57 (CO)</option>
+            <option value="52">+52 (MX)</option>
+          </select>
+          <input type="number" id="reg-phone" placeholder="Número" style="flex-grow: 1;" onkeypress="handleEnter(event, registrarReseller)">
+        </div>
+      </div>
+
+      <div class="form-group"><input type="password" id="reg-pass" placeholder="Contraseña" onkeypress="handleEnter(event, registrarReseller)"></div>
+      <button class="btn-primary" style="width:100%; margin-top: 10px;" onclick="registrarReseller()">Crear Cuenta</button>
+    </div>
+  </div>
+</div>
+
+<!-- APLICACIÓN PRINCIPAL -->
+<div id="app-container">
+  
+  <!-- BARRA LATERAL -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2 id="brand-text-sidebar">STREAM PANEL</h2>
+      <img id="sidebar-logo" src="" alt="Logo Sidebar">
+    </div>
+    
+    <ul class="sidebar-nav">
+      <!-- Opción Volver al Inicio (Solo Admin y Proveedor) -->
+      <li id="nav-inicio" class="nav-admin-prov-only" style="display:none;" onclick="cerrarSesion()">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg> Inicio
+      </li>
+
+      <li id="nav-dashboard" class="active nav-reseller-only" onclick="activarPanel('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg> Menú Principal
+      </li>
+      
+      <!-- Items para Reseller -->
+      <li id="nav-tienda" class="nav-reseller-only" onclick="activarPanel('tienda')">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg> Store
+      </li>
+      <li id="nav-compras" class="nav-reseller-only" onclick="activarPanel('compras')">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> Mis Compras
+      </li>
+      <li id="nav-recargar" class="nav-reseller-only" onclick="activarPanel('recargar')">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2" ry="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg> Recargar Crédito
+      </li>
+      <li id="nav-soporte" class="nav-reseller-only" onclick="activarPanel('soporte')">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg> Asistente
+      </li>
+
+      <!-- Items para Proveedor -->
+      <li id="nav-mistock" class="nav-proveedor-only" style="display:none;" onclick="activarPanel('mistock')">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg> Gestionar Mi Stock
+      </li>
+      <li id="nav-soporte-prov" class="nav-proveedor-only" style="display:none;" onclick="activarPanel('soporte-prov')">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg> Asistente
+      </li>
+
+      <!-- Exclusivo para admin -->
+      <li id="nav-admin" style="display:none;" onclick="activarPanel('admin')">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg> Gestión Admin
+      </li>
+    </ul>
+
+    <div class="sidebar-footer">
+      <button class="btn-admin-sidebar" onclick="pedirPasswordAdmin()">Acceso Admin</button>
+      
+      <div class="user-profile">
+        <div class="user-avatar" id="lbl-avatar">U</div>
+        <div class="user-info-text">
+          <span class="user-name" id="lbl-user-name">Usuario</span>
+          <span class="user-email" id="lbl-user-email">correo@mail.com</span>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="cerrarSesion()">Cerrar sesión</button>
+    </div>
+  </div>
+
+  <!-- CONTENIDO CENTRAL -->
+  <div class="main-content">
+    
+    <!-- BARRA SUPERIOR (SALDO) -->
+    <div class="topbar">
+      <div>
+        <button class="btn-menu-mobile" onclick="document.getElementById('sidebar').classList.add('open')">☰</button>
+      </div>
+      
+      <!-- LOGO CENTRAL -->
+      <img id="topbar-logo" class="topbar-center-logo" src="">
+
+      <div class="balance-badge" id="box-creditos">
+        <span class="currency">CRÉDITOS:</span>
+        <span class="amount" id="topbar-saldo">USD $0.00 <span style="color:var(--soles); font-size:0.95rem;">(S/ 0.00)</span></span>
+      </div>
+    </div>
+
+    <!-- CERRAR SIDEBAR EN MÓVIL AL HACER CLICK AFUERA -->
+    <div style="position: fixed; top:0; left:0; width:100%; height:100%; z-index:90; display:none;" id="sidebar-overlay-mobile" onclick="document.getElementById('sidebar').classList.remove('open'); this.style.display='none';"></div>
+
+    <!-- PANEL: DASHBOARD / Menú Principal (Reseller) -->
+    <div id="panel-dashboard" class="panel active">
+      <h1 class="panel-title">¡Bienvenido, <span id="dash-username" style="color:var(--accent-secondary);"></span>! 👋</h1>
+      <p class="panel-subtitle" id="dash-subtitle">Aquí tienes el resumen de tu cuenta y tus servicios activos.</p>
+
+      <div class="stats-grid" id="dash-stats-reseller">
+        <div class="stat-card highlight">
+          <span class="title">Compras Realizadas</span>
+          <span class="value" id="stat-total">0</span>
+        </div>
+        <div class="stat-card" style="border-color: rgba(0,255,127,0.3);">
+          <span class="title">Cuentas Activas</span>
+          <span class="value" id="stat-activas" style="color:var(--success)">0</span>
+        </div>
+        <div class="stat-card" style="border-color: rgba(255,140,0,0.3);">
+          <span class="title">Por Vencer (Pronto)</span>
+          <span class="value" id="stat-vencer" style="color:var(--warning)">0</span>
+        </div>
+      </div>
+
+      <!-- Stats para Proveedor -->
+      <div class="stats-grid" id="dash-stats-proveedor" style="display:none;">
+        <div class="stat-card highlight">
+          <span class="title">Cuentas Subidas (Total)</span>
+          <span class="value" id="stat-prov-subidas">0</span>
+        </div>
+        <div class="stat-card" style="border-color: rgba(0,255,127,0.3);">
+          <span class="title">Ventas de mis cuentas</span>
+          <span class="value" id="stat-prov-ventas" style="color:var(--success)">0</span>
+        </div>
+      </div>
+
+      <div class="table-container" id="dash-table-reseller">
+        <h3 style="margin-top:0; color:#fff; font-family:'Montserrat';">Mis cuentas recientes</h3>
+        <table>
+          <thead><tr><th>Servicio</th><th>Estado</th><th>Vence</th></tr></thead>
+          <tbody id="tabla-recientes"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PANEL: TIENDA (STORE) -->
+    <div id="panel-tienda" class="panel">
+      <h1 class="panel-title">Store</h1>
+      <p class="panel-subtitle">Adquiere nuevos servicios para tus clientes con tus créditos en USD.</p>
+
+      <div class="categories-bar">
+        <div class="cat-btn active" id="cat-streaming" onclick="filtrarTienda('streaming')">🎬 STREAMING</div>
+        <div class="cat-btn" id="cat-ia" onclick="filtrarTienda('ia')">🤖 SOFTWARE / IA</div>
+        <div class="cat-btn" id="cat-tv" onclick="filtrarTienda('tv')">📺 TV EN VIVO</div>
+      </div>
+
+      <div class="catalog-grid" id="grid-tienda"></div>
+    </div>
+
+    <!-- PANEL: MIS COMPRAS -->
+    <div id="panel-compras" class="panel">
+      <h1 class="panel-title">Mis Compras</h1>
+      <p class="panel-subtitle">Visualiza tus cuentas, datos de acceso y tiempo restante.</p>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Servicio / Info</th>
+              <th>Credenciales Entregadas</th>
+              <th>Fechas</th>
+              <th>Estado / Tiempo</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-compras-full"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PANEL: RECARGAR CRÉDITO -->
+    <div id="panel-recargar" class="panel">
+      <h1 class="panel-title">Recargar Crédito 💰</h1>
+      <p class="panel-subtitle">Tus créditos se acreditan en USD. Selecciona tu método de pago y envía el comprobante.</p>
+
+      <div class="recharge-grid">
+        <div class="recharge-box" style="background: linear-gradient(135deg, rgba(255,0,43,0.1) 0%, var(--bg-card) 100%);">
+          <h3 style="color: var(--text-muted); font-size:1rem;">CRÉDITOS ACTUALES</h3>
+          <div style="font-family:'Montserrat'; font-size:3rem; font-weight:900; color:var(--success); margin:20px 0;" id="recarga-saldo-display">$0.00</div>
+        </div>
+        
+        <div class="recharge-box">
+          <h3 style="color: var(--accent-secondary);">📱 QR Local</h3>
+          <img id="qr-pago-img" src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg" class="qr-img">
+          <p style="font-size:0.85rem; color:var(--text-muted);">Escanea para pago en moneda local.</p>
+        </div>
+
+        <div class="recharge-box">
+          <h3 style="color: #FCD535;">🔶 Binance Pay</h3>
+          <div style="text-align:left; background:rgba(0,0,0,0.5); padding:15px; border-radius:12px; font-size:0.9rem; margin-top:20px;">
+            <p style="color:var(--text-muted); margin:0 0 10px 0;">ID Binance:</p>
+            <strong style="font-size:1.2rem; color:#fff;" id="binance-id-display">123456789</strong>
+            <p style="color:var(--text-muted); margin:15px 0 5px 0;">Usuario:</p>
+            <strong style="color:#fff;" id="binance-user-display">ADMIN_STREAM</strong>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--bg-card); padding:30px; border-radius:20px; border:var(--border-tech); margin-bottom:30px;">
+        <h3 style="margin-top:0; font-family:'Montserrat'; color:#fff;">Solicitar Nueva Recarga</h3>
+        <div class="grid-2-col">
+          <div class="form-group">
+            <label>Método de Pago Usado</label>
+            <select id="form-recarga-metodo">
+              <option value="QR / Pago Local">QR / Pago Local</option>
+              <option value="Binance Pay">Binance Pay</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Monto depositado (En USD)</label>
+            <input type="number" id="form-recarga-monto" step="0.01" placeholder="Ejemplo: 20.00" onkeypress="handleEnter(event, solicitarRecarga)">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Enlace / ID del Comprobante (Opcional)</label>
+          <input type="text" id="form-recarga-comprobante" placeholder="ID de transacción o link" onkeypress="handleEnter(event, solicitarRecarga)">
+        </div>
+        <button class="btn-primary" onclick="solicitarRecarga()" style="width:100%; max-width:300px;">Enviar solicitud de recarga</button>
+      </div>
+
+      <div class="table-container">
+        <h3 style="margin-top:0; font-family:'Montserrat'; color:#fff;">Historial de Recargas</h3>
+        <table>
+          <thead><tr><th>Fecha</th><th>Método</th><th>Monto Solicitado</th><th>Estado</th></tr></thead>
+          <tbody id="tabla-recargas-reseller"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PANEL: ASISTENTE (SOPORTE) -->
+    <div id="panel-soporte" class="panel">
+      <h1 class="panel-title">Asistente Técnico 🎧</h1>
+      <p class="panel-subtitle">Gestiona y revisa los tickets enviados para tus cuentas.</p>
+      
+      <div class="stats-grid">
+        <div class="stat-card" style="border-color: rgba(255,255,255,0.2);">
+          <span class="title">Total de Tickets</span>
+          <span class="value" id="ticket-total">0</span>
+        </div>
+        <div class="stat-card" style="border-color: rgba(255,140,0,0.3);">
+          <span class="title">Tickets Abiertos</span>
+          <span class="value" id="ticket-abiertos" style="color:var(--warning)">0</span>
+        </div>
+        <div class="stat-card" style="border-color: rgba(0,255,127,0.3);">
+          <span class="title">Tickets Cerrados</span>
+          <span class="value" id="ticket-cerrados" style="color:var(--success)">0</span>
+        </div>
+      </div>
+
+      <div id="lista-tickets-reseller">
+      </div>
+    </div>
+
+    <!-- PANEL: MI STOCK (Solo para Proveedor) -->
+    <div id="panel-mistock" class="panel">
+      <h1 class="panel-title">Gestionar Mi Stock 📦</h1>
+      <p class="panel-subtitle">Sube tus cuentas a la Store global indicando si es Cuenta Completa o Perfil.</p>
+
+      <div class="stats-grid">
+        <div class="stat-card highlight">
+          <span class="title">Cuentas Subidas (Total)</span>
+          <span class="value" id="stat-prov-subidas">0</span>
+        </div>
+        <div class="stat-card" style="border-color: rgba(0,255,127,0.3);">
+          <span class="title">Ventas de mis cuentas</span>
+          <span class="value" id="stat-prov-ventas" style="color:var(--success)">0</span>
+        </div>
+      </div>
+
+      <div style="background: var(--bg-card); border: var(--border-tech); padding: 30px; border-radius: 20px; margin-bottom: 30px;">
+        <h3 id="form-prov-title" style="color: #fff; font-family: 'Montserrat'; margin-top: 0;">Agregar Cuenta a la Store</h3>
+        <input type="hidden" id="edit-prov-id">
+        <div class="grid-2-col">
+          <div class="form-group"><label>Servicio / Combo:</label><input type="text" id="form-prov-nombre"></div>
+          <div class="form-group"><label>Precio de Venta (USD):</label><input type="number" id="form-prov-precio" step="0.01"></div>
+          <div class="form-group"><label>Categoría:</label>
+            <select id="form-prov-categoria"><option value="streaming">STREAMING</option><option value="ia">SOFTWARE/IA</option><option value="tv">TV EN VIVO</option></select>
+          </div>
+          <div class="form-group"><label>Tipo de Cuenta:</label>
+            <select id="form-prov-tipo-venta">
+                <option value="Cuenta Completa">Cuenta Completa</option>
+                <option value="Perfil">Solo Perfil</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label>URL de Imagen del Servicio:</label><input type="text" id="form-prov-img" placeholder="https://..."></div>
+        <div class="form-group">
+          <label style="color:var(--success);">Detalles de Entrega (1 CREDENCIAL POR LÍNEA):</label>
+          <textarea id="form-prov-credenciales" oninput="document.getElementById('calc-stock-prov').innerText = this.value.split('\n').filter(x=>x.trim()!=='').length" placeholder="Linea 1: correo1@mail.com | Pass: 123 | Perfil 1&#10;Linea 2: correo1@mail.com | Pass: 123 | Perfil 2" rows="4"></textarea>
+          <small style="color:var(--info);">Stock calculado automáticamente: <span id="calc-stock-prov" style="font-weight:bold; font-size:1.1rem;">0</span></small>
+        </div>
+        <div class="form-group"><label>Descripción pública de lo que incluye:</label><textarea id="form-prov-desc" rows="3"></textarea></div>
+        <button class="btn-primary" id="btn-save-prov" onclick="guardarCuentaProv()">Publicar en Store</button>
+        <button class="btn-secondary" id="btn-cancel-prov" style="display: none;" onclick="cancelarEdicionProv()">Cancelar Edición</button>
+      </div>
+
+      <div class="table-container" style="margin-bottom: 30px;">
+        <h3 style="margin-top:0; color:#fff; font-family:'Montserrat';">Mis Cuentas Subidas</h3>
+        <table>
+          <thead><tr><th>Servicio</th><th>Tipo</th><th>Precio</th><th>Stock</th><th>Credenciales Restantes</th><th>Acciones</th></tr></thead>
+          <tbody id="tabla-mistock"></tbody>
+        </table>
+      </div>
+
+      <!-- NUEVA TABLA VENTAS PROVEEDOR -->
+      <div class="table-container" style="border-color:var(--success);">
+        <h3 style="margin-top:0; color:var(--success); font-family:'Montserrat';">Mis Ventas (Cuentas Entregadas a Resellers)</h3>
+        <table>
+          <thead><tr><th>Reseller (Comprador)</th><th>Servicio Comprado</th><th>Tipo de Cuenta</th><th>Credenciales Entregadas</th><th>Fecha Compra</th><th>Acciones</th></tr></thead>
+          <tbody id="tabla-ventas-prov"></tbody>
+        </table>
+      </div>
+    </div>
+    
+    <!-- PANEL: ASISTENTE PROVEEDOR (NUEVO) -->
+    <div id="panel-soporte-prov" class="panel">
+      <h1 class="panel-title">Asistente de Proveedor 🎧</h1>
+      <p class="panel-subtitle">Gestiona y revisa los tickets enviados por los Resellers sobre TUS cuentas.</p>
+      
+      <div class="table-container" style="border-color:var(--info);">
+        <div id="lista-tickets-prov"></div>
+      </div>
+    </div>
+
+    <!-- PANEL: ADMIN -->
+    <div id="panel-admin" class="panel">
+      <h1 class="panel-title" style="color:var(--accent-primary);">Panel de Administración</h1>
+      <p class="panel-subtitle">Gestión global del sistema, stock, usuarios y recargas.</p>
+
+      <!-- Solicitudes de Registro (NUEVO) -->
+      <div class="table-container" style="margin-bottom: 30px; border-color:var(--info);">
+        <h3 style="margin-top:0; color:var(--info); font-family:'Montserrat';">👤 Solicitudes de Registro (Nuevos)</h3>
+        <table>
+          <thead><tr><th>Fecha</th><th>Usuario / Correo</th><th>WhatsApp</th><th>Acciones</th></tr></thead>
+          <tbody id="tabla-registros-admin"></tbody>
+        </table>
+      </div>
+
+      <!-- Solicitudes de Recarga -->
+      <div class="table-container" style="margin-bottom: 30px; border-color:var(--warning);">
+        <h3 style="margin-top:0; color:var(--warning); font-family:'Montserrat';">🔔 Solicitudes de Recarga</h3>
+        <table>
+          <thead><tr><th>Fecha</th><th>Reseller</th><th>Método</th><th>Monto (USD)</th><th>Acciones</th></tr></thead>
+          <tbody id="tabla-recargas-admin"></tbody>
+        </table>
+      </div>
+      
+      <!-- Tickets de Soporte (ADMIN) -->
+      <div class="table-container" style="margin-bottom: 30px; border-color:var(--success);">
+        <h3 style="margin-top:0; color:var(--success); font-family:'Montserrat';">🎧 Tickets de Asistencia Totales</h3>
+        <div id="lista-tickets-admin"></div>
+      </div>
+
+      <!-- Detalle Compras Resellers -->
+      <div class="table-container" style="margin-bottom: 30px;">
+        <h3 style="margin-top:0; color:#fff; font-family:'Montserrat';">Control: Ventas en la Store</h3>
+        <table>
+          <thead><tr><th>Reseller (Comprador)</th><th>Servicio Comprado</th><th>Tipo de Cuenta</th><th>Credenciales Entregadas</th><th>Fecha Compra</th><th>Días Restantes</th><th>Acciones</th></tr></thead>
+          <tbody id="tabla-compras-admin"></tbody>
+        </table>
+      </div>
+
+      <!-- Gestión de Stock Admin -->
+      <div style="background: var(--bg-card); border: var(--border-tech); padding: 30px; border-radius: 20px; margin-bottom: 30px;">
+        <h3 id="form-title" style="color: #fff; font-family: 'Montserrat'; margin-top: 0;">Agregar Cuenta al Stock Global (Admin)</h3>
+        <input type="hidden" id="edit-id">
+        <div class="grid-2-col">
+          <div class="form-group"><label>Servicio / Combo:</label><input type="text" id="form-nombre"></div>
+          <div class="form-group"><label>Precio (USD):</label><input type="number" id="form-precio" step="0.01"></div>
+          <div class="form-group"><label>Categoría:</label>
+            <select id="form-categoria"><option value="streaming">STREAMING</option><option value="ia">SOFTWARE/IA</option><option value="tv">TV EN VIVO</option></select>
+          </div>
+          <div class="form-group"><label>Tipo de Cuenta:</label>
+            <select id="form-tipo-venta">
+                <option value="Cuenta Completa">Cuenta Completa</option>
+                <option value="Perfil">Solo Perfil</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label>URL de Imagen:</label><input type="text" id="form-img"></div>
+        <div class="form-group">
+          <label style="color:var(--success);">Detalles de Entrega (1 CREDENCIAL POR LÍNEA):</label>
+          <textarea id="form-credenciales" oninput="document.getElementById('calc-stock-admin').innerText = this.value.split('\n').filter(x=>x.trim()!=='').length" placeholder="Escribe los datos aquí. Si es perfil, pon 1 perfil por línea. Ejemplo:&#10;correo1@mail.com | Pass: 123 | Perfil 1 | Pin: 0000&#10;correo1@mail.com | Pass: 123 | Perfil 2 | Pin: 1111" rows="5"></textarea>
+          <small style="color:var(--info);">Stock calculado automáticamente: <span id="calc-stock-admin" style="font-weight:bold; font-size:1.1rem;">0</span> unidades</small>
+        </div>
+        <div class="form-group"><label>Descripción pública:</label><textarea id="form-desc" rows="3"></textarea></div>
+        <button class="btn-primary" id="btn-save" onclick="guardarCuenta()">Publicar Cuenta en Store</button>
+        <button class="btn-secondary" id="btn-cancel" style="display: none;" onclick="cancelarEdicion()">Cancelar Edición</button>
+      </div>
+
+      <div class="table-container" style="margin-bottom: 30px;">
+        <h3 style="margin-top:0; color:#fff; font-family:'Montserrat';">Stock Total (Todos los Proveedores)</h3>
+        <table>
+          <thead><tr><th>Servicio</th><th>Tipo</th><th>Precio</th><th>Stock</th><th>Credenciales Restantes</th><th>Proveedor</th><th>Acciones</th></tr></thead>
+          <tbody id="tabla-stock-admin"></tbody>
+        </table>
+      </div>
+
+      <!-- ================== GESTIÓN DE USUARIOS (RESELLERS Y PROVEEDORES) ================== -->
+      <div style="background: var(--bg-card); border: var(--border-tech); padding: 30px; border-radius: 20px; margin-bottom: 30px;">
+        <h3 id="form-reseller-title" style="color: #fff; font-family: 'Montserrat'; margin-top: 0;">Agregar / Editar Usuario</h3>
+        <input type="hidden" id="edit-reseller-original">
+        <div class="grid-2-col">
+          <div class="form-group"><label>Usuario / Login:</label><input type="text" id="admin-reg-user"></div>
+          <div class="form-group"><label>Correo Electrónico:</label><input type="email" id="admin-reg-email"></div>
+          <div class="form-group"><label>WhatsApp:</label><input type="number" id="admin-reg-phone"></div>
+          <div class="form-group"><label>Contraseña:</label><input type="text" id="admin-reg-pass"></div>
+          <div class="form-group">
+            <label>Tipo de Usuario:</label>
+            <select id="admin-reg-rol" onchange="toggleProvFields()">
+              <option value="reseller">Reseller (Comprador)</option>
+              <option value="proveedor">Proveedor (Vendedor)</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Créditos (Saldo USD):</label><input type="number" id="admin-reg-saldo" step="0.01" value="0.00"></div>
+        </div>
+        
+        <div id="prov-fields" style="display:none; padding:15px; border:1px dashed var(--accent-primary); border-radius:8px; margin-bottom:15px;">
+            <p style="margin-top:0; color:var(--accent-secondary); font-size:0.85rem; font-weight:bold;">Datos Exclusivos del Proveedor</p>
+            <div class="grid-2-col">
+                <div class="form-group"><label>Nickname de Tienda:</label><input type="text" id="admin-reg-nickname" placeholder="Ej: MegaCuentas"></div>
+                <div class="form-group"><label>URL Logo de Tienda:</label><input type="text" id="admin-reg-logo" placeholder="https://..."></div>
+            </div>
+        </div>
+
+        <button class="btn-primary" id="btn-save-reseller" onclick="guardarResellerAdmin()">Crear Usuario</button>
+        <button class="btn-secondary" id="btn-cancel-reseller" style="display: none;" onclick="cancelarEdicionReseller()">Cancelar Edición</button>
+      </div>
+
+      <div class="table-container" style="margin-bottom: 30px;">
+        <h3 style="margin-top:0; color:#fff; font-family:'Montserrat';">Usuarios Registrados (Aprobados)</h3>
+        <table>
+          <thead><tr><th>Usuario</th><th>Rol</th><th>Créditos USD</th><th>Contraseña (View)</th><th>Acciones</th></tr></thead>
+          <tbody id="tabla-resellers"></tbody>
+        </table>
+      </div>
+
+      <!-- Configuración -->
+      <div style="background: var(--bg-card); border: var(--border-tech); padding: 30px; border-radius: 20px; margin-bottom: 30px;">
+        <h3 style="color: #fff; font-family: 'Montserrat'; margin-top: 0;">Ajustes Administrativos</h3>
+        
+        <div class="grid-2-col" style="margin-bottom:15px;">
+          <div class="form-group">
+            <label style="color: var(--accent-secondary);">Tipo de Cambio (1 USD a Soles PEN):</label>
+            <input type="number" step="0.01" id="config-tipo-cambio" placeholder="Ej: 3.75">
+          </div>
+          <div class="form-group">
+            <label style="color: var(--accent-secondary);">WhatsApp Admin (Aprobación):</label>
+            <input type="number" id="config-whatsapp">
+          </div>
+        </div>
+
+        <div class="grid-2-col" style="margin-bottom:15px;">
+          <div class="form-group">
+            <label style="color: var(--accent-secondary);">URL Logo Lateral (Sustituye texto):</label>
+            <input type="text" id="config-logo-sidebar" placeholder="https://ejemplo.com/logo-izq.png">
+          </div>
+          <div class="form-group">
+            <label style="color: var(--accent-secondary);">URL Logo Central (Arriba al medio):</label>
+            <input type="text" id="config-logo-center" placeholder="https://ejemplo.com/logo-centro.png">
+          </div>
+        </div>
+        
+        <div class="grid-2-col" style="margin-bottom:15px; padding:15px; border:1px solid rgba(255,255,255,0.1); border-radius:8px;">
+          <div class="form-group"><label>Nickname del Admin (Al subir cuentas):</label><input type="text" id="config-admin-nick" placeholder="Ej: Administrador"></div>
+          <div class="form-group"><label>Logo del Admin (Al subir cuentas):</label><input type="text" id="config-admin-logo" placeholder="URL imagen mini"></div>
+        </div>
+
+        <div class="grid-2-col">
+          <div class="form-group"><label>URL QR de Pago:</label><input type="text" id="config-qr"></div>
+          <div class="form-group"><label>ID Binance:</label><input type="text" id="config-binance-id"></div>
+        </div>
+        <div class="grid-2-col">
+          <div class="form-group"><label>Usuario Binance:</label><input type="text" id="config-binance-user"></div>
+          <div class="form-group"><label>Contraseña Admin:</label><input type="password" id="config-pass" placeholder="Dejar blanco para no cambiar" onkeypress="handleEnter(event, guardarConfiguracion)"></div>
+        </div>
+        
+        <button class="btn-primary" onclick="guardarConfiguracion()">Guardar Ajustes</button>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL COMPRA (STORE) -->
+<div id="modal-compra" class="modal-overlay">
+  <div class="modal-content" style="text-align: center;">
+    <h2 id="compra-titulo" style="font-family:'Montserrat'; color:#fff; margin-top:0; font-size:1.4rem;"></h2>
+    <div id="compra-tipo-badge" style="margin-bottom:10px;"></div>
+    <p style="color:var(--text-muted); font-size:0.9rem;">Se descontará automáticamente de tus créditos y se te enviará 1 credencial del stock.</p>
+    <div style="margin: 20px 0; font-family:'Montserrat'; font-weight:900;" id="compra-precio"></div>
+    
+    <div class="form-group" style="text-align: left;">
+      <label>Tu número de WhatsApp (Opcional, para envío por WA):</label>
+      <div style="display:flex; gap:10px;">
+        <select id="compra-cod-pais" style="width: 130px; font-weight:bold; flex-shrink:0;">
+          <option value="51">+51 (PE)</option>
+          <option value="591">+591 (BO)</option>
+          <option value="54">+54 (AR)</option>
+          <option value="56">+56 (CL)</option>
+          <option value="57">+57 (CO)</option>
+          <option value="52">+52 (MX)</option>
+        </select>
+        <input type="number" id="compra-wa" placeholder="Número" style="flex-grow: 1;" onkeypress="handleEnter(event, procesarCompra)">
+      </div>
+    </div>
+    
+    <div class="form-group" style="text-align: left; margin-top:15px;">
+      <label>Nota / Cliente Final (Para tu propio registro):</label>
+      <input type="text" id="compra-cliente" placeholder="Ej: Cliente Juan Pérez - 1 mes" onkeypress="handleEnter(event, procesarCompra)">
+    </div>
+    
+    <button class="btn-primary" style="width:100%; margin-top:10px; font-size:1.1rem; padding:15px;" onclick="procesarCompra()">Confirmar Compra</button>
+    <button class="btn-secondary" style="width:100%; margin-top:15px; border:none;" onclick="cerrarModalCompra()">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL CREAR TICKET DE SOPORTE -->
+<div id="modal-soporte-crear" class="modal-overlay">
+  <div class="modal-content">
+    <h2 style="font-family:'Montserrat'; color:#fff; margin-top:0;">Solicitar Asistencia</h2>
+    <p style="color:var(--text-muted); font-size:0.9rem;">Reporta el problema de tu cuenta comprada.</p>
+    
+    <div style="background:rgba(0,0,0,0.5); padding:15px; border-radius:12px; margin-bottom:20px; border: 1px solid rgba(255,255,255,0.1);">
+        <strong id="soporte-servicio-nombre" style="color:var(--accent-secondary); font-size:1.1rem;"></strong>
+        <div style="font-size:0.8rem; color:var(--text-muted); margin-top:5px;" id="soporte-cliente-nota"></div>
+    </div>
+    
+    <input type="hidden" id="soporte-pedido-id">
+    
+    <div class="form-group">
+        <label>Asunto:</label>
+        <input type="text" id="soporte-asunto" placeholder="Ej: No puedo ingresar" onkeypress="handleEnter(event, enviarSoporte)">
+    </div>
+    <div class="form-group">
+        <label>Mensaje:</label>
+        <textarea id="soporte-mensaje" rows="4" placeholder="Explica el problema detalladamente con la cuenta..."></textarea>
+    </div>
+
+    <div style="display:flex; gap:10px; margin-top:20px;">
+        <button class="btn-primary" style="flex:1;" onclick="enviarSoporte()">Enviar reporte</button>
+        <button class="btn-secondary" style="flex:1;" onclick="document.getElementById('modal-soporte-crear').style.display='none'">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL COMPRA EXITOSA -->
+<div id="modal-exito" class="modal-overlay">
+  <div class="modal-content" style="text-align: center; border-color:var(--success); box-shadow: 0 0 30px rgba(0,255,127,0.3);">
+    <h2 style="font-family:'Montserrat'; color:var(--success); margin-top:0;">¡Compra Exitosa! 🎉</h2>
+    <p style="color:var(--text-light); font-size:0.95rem;">Los créditos han sido descontados. Aquí tienes los datos de la cuenta:</p>
+    
+    <div style="background: rgba(0,0,0,0.5); border:1px solid var(--success); padding:20px; border-radius:12px; margin:20px 0; text-align:left; color:#fff; font-family:monospace; white-space:pre-wrap; word-break: break-all;" id="exito-credenciales"></div>
+    
+    <p style="color:var(--text-muted); font-size:0.8rem;">* Estos datos se han guardado en tu pestaña "Mis Compras".</p>
+    <button class="btn-primary" style="width:100%; margin-top:10px; background:var(--success);" onclick="document.getElementById('modal-exito').style.display='none'; activarPanel('compras');">Ir a Mis Compras</button>
+  </div>
+</div>
+
+<!-- MODAL ADMIN AUTH -->
+<div id="modal-admin" class="modal-overlay">
+  <div class="modal-content" style="text-align: center;">
+    <h2 style="font-family:'Montserrat'; color:#fff;">Acceso Administrativo</h2>
+    <input type="password" id="admin-pass-input" placeholder="Contraseña Admin" style="margin:20px 0; text-align:center;" onkeypress="handleEnter(event, verificarAdmin)">
+    <button class="btn-primary" style="width:100%;" onclick="verificarAdmin()">Ingresar</button>
+    <button class="btn-secondary" style="width:100%; margin-top:10px; border:none;" onclick="document.getElementById('modal-admin').style.display='none'">Cancelar</button>
+  </div>
+</div>
+
+<script>
+  // UTILIDAD: Apretar Enter
+  function handleEnter(e, callback) {
+    if(e.key === 'Enter') {
+      e.preventDefault();
+      callback();
+    }
+  }
+
+  function toggleProvFields() {
+      const rol = document.getElementById('admin-reg-rol').value;
+      document.getElementById('prov-fields').style.display = rol === 'proveedor' ? 'block' : 'none';
+  }
+
+  document.addEventListener('click', function(event) {
+      const sidebar = document.getElementById('sidebar');
+      const btnMobile = document.querySelector('.btn-menu-mobile');
+      if (window.innerWidth <= 900 && sidebar.classList.contains('open')) {
+          if (!sidebar.contains(event.target) && !btnMobile.contains(event.target)) {
+              sidebar.classList.remove('open');
+          }
+      }
+  });
+
+  // CONFIGURACIÓN FIREBASE FIRESTORE
+  const firebaseConfig = {
+    apiKey: "AIzaSyANhATsBnNgNEoxhB3UpCaK9S8uJX094-M",
+    authDomain: "crb-ventas.firebaseapp.com",
+    projectId: "crb-ventas",
+    storageBucket: "crb-ventas.firebasestorage.app",
+    messagingSenderId: "307148224489",
+    appId: "1:307148224489:web:2defa0475931fd8c897d78"
+  };
+
+  let db = null;
+  let useCloud = false;
+
+  if (firebaseConfig.apiKey !== "TU_API_KEY_AQUI") {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    useCloud = true;
+  }
+
+  // ESTRUCTURA DE DATOS
+  let appData = {
+    config: { 
+      password: "000", mainTitle: "PLATAFORMA STREAM", whatsapp: "59175222646",
+      qrUrl: "https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg",
+      binanceId: "1185149398", binanceUser: "ADMIN_STREAM",
+      logoSidebar: "", logoCenter: "",
+      adminNick: "Administrador", adminLogo: "",
+      tipoCambio: 3.75
+    },
+    cuentas: [],
+    pedidos: [], 
+    resellers: [],
+    recargas: [],
+    tickets: []
+  };
+
+  let currentUser = null; 
+  let isAdmin = false;
+  let catActual = 'streaming';
+  let itemCompraTemp = null;
+
+  window.onload = () => {
+    if (useCloud) {
+      db.collection('plataforma').doc('global_data').onSnapshot((doc) => {
+        if (doc.exists) {
+          const data = doc.data();
+          appData = data;
+          if (!appData.cuentas) appData.cuentas = [];
+          if (!appData.pedidos) appData.pedidos = [];
+          if (!appData.resellers) appData.resellers = [];
+          if (!appData.recargas) appData.recargas = [];
+          if (!appData.tickets) appData.tickets = [];
+          if (!appData.config.logoSidebar) appData.config.logoSidebar = "";
+          if (!appData.config.logoCenter) appData.config.logoCenter = "";
+          if (!appData.config.adminNick) appData.config.adminNick = "Administrador";
+          if (!appData.config.adminLogo) appData.config.adminLogo = "";
+          if (!appData.config.whatsapp) appData.config.whatsapp = "59175222646";
+          if (!appData.config.tipoCambio) appData.config.tipoCambio = 3.75;
+        }
+        aplicarConfiguracionGrafica();
+        if(currentUser) syncCurrentUserLocal(); 
+        if(currentUser || isAdmin) renderizarTodo();
+      }, (error) => {
+          console.error("Error obteniendo datos de Firestore: ", error);
+      });
+    } else {
+      const local = localStorage.getItem('xforce_local_data');
+      if (local) appData = JSON.parse(local);
+      if (!appData.resellers) appData.resellers = [];
+      if (!appData.recargas) appData.recargas = [];
+      if (!appData.tickets) appData.tickets = [];
+      if (!appData.config.adminNick) appData.config.adminNick = "Administrador";
+      if (!appData.config.tipoCambio) appData.config.tipoCambio = 3.75;
+      aplicarConfiguracionGrafica();
+    }
+
+    const savedSession = localStorage.getItem('logged_reseller');
+    if(savedSession) {
+      currentUser = JSON.parse(savedSession);
+      syncCurrentUserLocal();
+      ingresarAlSistema();
+    }
+  };
+
+  function sincronizarDatos() {
+    if (useCloud) { 
+      db.collection('plataforma').doc('global_data').set(appData)
+        .catch(error => console.error("Error sincronizando a Firestore: ", error));
+    } else { 
+      localStorage.setItem('xforce_local_data', JSON.stringify(appData)); 
+    }
+    if(currentUser) syncCurrentUserLocal();
+    if(currentUser || isAdmin) renderizarTodo();
+  }
+
+  function syncCurrentUserLocal() {
+    const dbUser = appData.resellers.find(r => r.user === currentUser.user);
+    if(dbUser) {
+      currentUser = dbUser;
+      localStorage.setItem('logged_reseller', JSON.stringify(currentUser));
+    }
+  }
+
+  function aplicarConfiguracionGrafica() {
+    document.getElementById('config-qr').value = appData.config.qrUrl || "";
+    document.getElementById('config-whatsapp').value = appData.config.whatsapp || "";
+    document.getElementById('config-binance-id').value = appData.config.binanceId || "";
+    document.getElementById('config-binance-user').value = appData.config.binanceUser || "";
+    document.getElementById('config-logo-sidebar').value = appData.config.logoSidebar || "";
+    document.getElementById('config-logo-center').value = appData.config.logoCenter || "";
+    document.getElementById('config-admin-nick').value = appData.config.adminNick || "";
+    document.getElementById('config-admin-logo').value = appData.config.adminLogo || "";
+    document.getElementById('config-tipo-cambio').value = appData.config.tipoCambio || 3.75;
+    
+    document.getElementById('qr-pago-img').src = appData.config.qrUrl || "";
+    document.getElementById('binance-id-display').innerText = appData.config.binanceId || "";
+    document.getElementById('binance-user-display').innerText = appData.config.binanceUser || "";
+
+    const txtSidebar = document.getElementById('brand-text-sidebar');
+    const imgSidebar = document.getElementById('sidebar-logo');
+    const imgCenter = document.getElementById('topbar-logo');
+
+    if(appData.config.logoSidebar && appData.config.logoSidebar.trim() !== '') {
+        imgSidebar.src = appData.config.logoSidebar;
+        imgSidebar.style.display = 'block';
+        txtSidebar.style.display = 'none';
+    } else {
+        imgSidebar.style.display = 'none';
+        txtSidebar.style.display = 'block';
+    }
+
+    if(appData.config.logoCenter && appData.config.logoCenter.trim() !== '') {
+        imgCenter.src = appData.config.logoCenter;
+        imgCenter.style.display = 'block';
+    } else {
+        imgCenter.style.display = 'none';
+    }
+  }
+
+  // ================= LOGIN Y REGISTRO =================
+  function switchAuthTab(tab) {
+    document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    document.getElementById('form-login').style.display = tab === 'login' ? 'block' : 'none';
+    document.getElementById('form-register').style.display = tab === 'register' ? 'block' : 'none';
+  }
+
+  function registrarReseller() {
+    const user = document.getElementById('reg-user').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const codPais = document.getElementById('reg-cod-pais').value;
+    const phoneNum = document.getElementById('reg-phone').value.trim();
+    const pass = document.getElementById('reg-pass').value.trim();
+
+    if(!user || !email || !phoneNum || !pass) { alert("Completa todos los campos."); return; }
+    if(appData.resellers.find(r => r.user.toLowerCase() === user.toLowerCase())) { alert("El usuario ya existe."); return; }
+
+    const phone = codPais + phoneNum;
+    const nuevoUser = { user, email, phone, pass, saldo: 0.00, role: 'reseller', estado: 'Pendiente', fechaReg: new Date().toLocaleDateString() };
+    
+    appData.resellers.push(nuevoUser);
+    sincronizarDatos();
+    
+    const msj = `Hola, quiero suscribirme a la plataforma.\n\nUsuario: *${user}*\nCorreo: *${email}*\n\nPor favor aprueba mi cuenta.`;
+    const waLink = "https://wa.me/" + appData.config.whatsapp + "?text=" + encodeURIComponent(msj);
+    
+    document.getElementById('reg-user').value = '';
+    document.getElementById('reg-email').value = '';
+    document.getElementById('reg-phone').value = '';
+    document.getElementById('reg-pass').value = '';
+    
+    document.querySelector('.auth-box').style.display = 'none';
+    document.getElementById('auth-screen').innerHTML += `<div style="text-align:center; max-width:400px; background:var(--bg-panel); padding:30px; border-radius:20px; border:1px solid var(--success);"><h2 style="color:var(--success); font-family:'Montserrat';">¡Registro Exitoso!</h2><p>Tu cuenta está <b>Pendiente</b> de aprobación por el Administrador.</p><p>Serás redirigido a WhatsApp para solicitar tu acceso.</p><button class="btn-primary" style="margin-top:20px;" onclick="window.location.reload()">Volver al Inicio</button></div>`;
+    
+    setTimeout(() => {
+        window.open(waLink, '_blank');
+    }, 1000);
+  }
+
+  function iniciarSesion() {
+    const u = document.getElementById('login-user').value.trim();
+    const p = document.getElementById('login-pass').value.trim();
+    
+    const encontrado = appData.resellers.find(r => (r.user === u || r.email === u) && r.pass === p);
+    if(encontrado) {
+      if(encontrado.estado === 'Pendiente') {
+          alert("Tu cuenta aún está pendiente de aprobación por el administrador.");
+          return;
+      }
+      currentUser = encontrado;
+      if(!currentUser.role) currentUser.role = 'reseller'; 
+      localStorage.setItem('logged_reseller', JSON.stringify(currentUser));
+      ingresarAlSistema();
+    } else {
+      alert("Credenciales incorrectas.");
+    }
+  }
+
+  function ingresarAlSistema() {
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('app-container').style.display = 'flex';
+    
+    document.getElementById('lbl-user-name').innerText = currentUser.user;
+    document.getElementById('lbl-user-email').innerText = currentUser.email;
+    
+    let isProv = currentUser.role === 'proveedor';
+    
+    if(isProv && currentUser.logoUrl) {
+        document.getElementById('lbl-avatar').innerHTML = `<img src="${currentUser.logoUrl}">`;
+    } else {
+        document.getElementById('lbl-avatar').innerHTML = currentUser.user.charAt(0).toUpperCase();
+    }
+    document.getElementById('dash-username').innerText = currentUser.user;
+    
+    document.querySelectorAll('.nav-reseller-only').forEach(el => el.style.display = isProv ? 'none' : 'flex');
+    document.querySelectorAll('.nav-proveedor-only').forEach(el => el.style.display = isProv ? 'flex' : 'none');
+    document.querySelectorAll('.nav-admin-prov-only').forEach(el => el.style.display = isProv ? 'flex' : 'none');
+    document.getElementById('box-creditos').style.display = isProv ? 'none' : 'flex';
+    
+    if(isProv) {
+        activarPanel('mistock');
+    } else {
+        activarPanel('dashboard');
+    }
+    renderizarTodo();
+  }
+
+  function cerrarSesion() {
+    currentUser = null; isAdmin = false;
+    localStorage.removeItem('logged_reseller');
+    document.getElementById('nav-admin').style.display = 'none';
+    document.querySelectorAll('.nav-admin-prov-only').forEach(el => el.style.display = 'none');
+    document.getElementById('app-container').style.display = 'none';
+    document.getElementById('auth-screen').style.display = 'flex';
+    window.location.reload();
+  }
+
+  function activarPanel(panelId) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + panelId).classList.add('active');
+    
+    document.querySelectorAll('.sidebar-nav li').forEach(li => li.classList.remove('active'));
+    if(document.getElementById('nav-' + panelId)) {
+      document.getElementById('nav-' + panelId).classList.add('active');
+    }
+    if (window.innerWidth <= 900) { document.getElementById('sidebar').classList.remove('open'); }
+  }
+
+  // ================= RENDERIZADO =================
+  function renderizarTodo() {
+    if(!currentUser && !isAdmin) return;
+    
+    if(currentUser) {
+      const isProv = currentUser.role === 'proveedor';
+      const tc = parseFloat(appData.config.tipoCambio || 3.75);
+      
+      if(!isProv) {
+          // DASHBOARD RESELLER
+          document.getElementById('dash-stats-reseller').style.display = 'grid';
+          document.getElementById('dash-stats-proveedor').style.display = 'none';
+          document.getElementById('dash-table-reseller').style.display = 'block';
+          document.getElementById('dash-subtitle').innerText = "Aquí tienes el resumen de tu cuenta y tus servicios activos.";
+
+          const saldoUSD = parseFloat(currentUser.saldo || 0);
+          const saldoPEN = (saldoUSD * tc).toFixed(2);
+          
+          document.getElementById('topbar-saldo').innerHTML = `USD $${saldoUSD.toFixed(2)} <span style="color:var(--soles); font-size:0.95rem;">(S/ ${saldoPEN})</span>`;
+          document.getElementById('recarga-saldo-display').innerHTML = `$${saldoUSD.toFixed(2)} <div style="font-size:1.4rem; color:var(--soles); margin-top:5px; font-weight:800;">S/ ${saldoPEN}</div>`;
+
+          const misCompras = appData.pedidos.filter(p => p.reseller === currentUser.user);
+          const ahora = Date.now();
+          const unMesMs = 30 * 24 * 60 * 60 * 1000;
+          
+          let activas = 0; let porVencer = 0;
+          const tRecientes = document.getElementById('tabla-recientes');
+          const tCompras = document.getElementById('tabla-compras-full');
+          tRecientes.innerHTML = ''; tCompras.innerHTML = '';
+
+          misCompras.forEach(compra => {
+            const tiempoPasado = ahora - compra.timestamp;
+            const msRestantes = unMesMs - tiempoPasado;
+            const diasRestantes = Math.ceil(msRestantes / (1000 * 60 * 60 * 24));
+            
+            let estadoTxt = ""; let badgeClass = ""; let barraColor = "";
+            if(diasRestantes > 5) { activas++; estadoTxt = "Activa"; badgeClass = "badge-active"; barraColor = "var(--success)"; }
+            else if(diasRestantes > 0) { activas++; porVencer++; estadoTxt = "Por vencer"; badgeClass = "badge-warning"; barraColor = "var(--warning)"; }
+            else { estadoTxt = "Vencida"; badgeClass = "badge-expired"; barraColor = "var(--accent-primary)"; }
+
+            let tipoBadge = compra.tipoVenta === 'Perfil' ? '<span class="badge badge-tipo-perfil">Perfil</span>' : '<span class="badge badge-tipo-completa">Cuenta Completa</span>';
+
+            tRecientes.innerHTML += `<tr>
+              <td><strong>${compra.servicio}</strong> ${tipoBadge}<br><small style="color:var(--text-muted)">Cliente: ${compra.clienteInfo || 'N/A'}</small></td>
+              <td><span class="badge ${badgeClass}">${estadoTxt}</span></td>
+              <td>${diasRestantes > 0 ? diasRestantes + ' d' : '0 d'}</td>
+            </tr>`;
+
+            const propPorcentaje = Math.max(0, Math.min(100, (diasRestantes / 30) * 100));
+            const btnActions = `
+              <div style="display:flex; gap:5px; flex-wrap:wrap; max-width:180px;">
+                <button class="btn-action" style="background:#0050b3; color:#fff;" onclick="copiarCredenciales(${compra.id})" title="Copiar Datos">📋 Copiar</button>
+                <button class="btn-action" style="background:#25D366; color:#fff;" onclick="enviarWaCredenciales(${compra.id})" title="Enviar por WhatsApp">💬 WA</button>
+                <button class="btn-action" style="background:var(--warning); color:#fff;" onclick="avisarVencimiento(${compra.id})" title="Avisar Vencimiento">⏳ Aviso</button>
+                <button class="btn-action" style="background:var(--accent-primary); color:#fff;" onclick="abrirModalSoporte(${compra.id})" title="Asistente">🎧 Asistente</button>
+              </div>
+            `;
+
+            tCompras.innerHTML += `<tr>
+              <td><strong>${compra.servicio}</strong> ${tipoBadge}<br><small style="color:var(--text-muted)">Cliente: ${compra.clienteInfo || 'N/A'}</small></td>
+              <td><div style="background:rgba(0,0,0,0.5); padding:8px; border-radius:8px; font-family:monospace; font-size:0.85rem; color:var(--success); border:1px solid rgba(0,255,127,0.2); white-space:pre-wrap;">${compra.credenciales}</div></td>
+              <td><small style="color:var(--text-muted)">Compra: ${compra.fecha}</small></td>
+              <td style="min-width:120px;">
+                <span class="badge ${badgeClass}" style="margin-bottom:8px; display:inline-block;">${estadoTxt}</span>
+                <div style="font-size:0.8rem; margin-bottom:5px;">Restante: ${diasRestantes > 0 ? diasRestantes : 0} días</div>
+                <div style="width:100%; height:4px; background:rgba(255,255,255,0.1); border-radius:2px;">
+                  <div style="width:${propPorcentaje}%; height:100%; background:${barraColor}; border-radius:2px;"></div>
+                </div>
+              </td>
+              <td>${btnActions}</td>
+            </tr>`;
+          });
+
+          document.getElementById('stat-total').innerText = misCompras.length;
+          document.getElementById('stat-activas').innerText = activas;
+          document.getElementById('stat-vencer').innerText = porVencer;
+
+          filtrarTienda(catActual);
+          renderizarRecargasReseller();
+          renderizarSoporteReseller();
+          
+      } else {
+          // DASHBOARD PROVEEDOR
+          let miStock = appData.cuentas.filter(c => c.proveedorUser === currentUser.user);
+          let misVentas = appData.pedidos.filter(p => p.provUser === currentUser.user);
+          
+          document.getElementById('stat-prov-subidas').innerText = miStock.length;
+          document.getElementById('stat-prov-ventas').innerText = misVentas.length;
+          
+          renderizarMiStockProv();
+          renderizarSoporteProv();
+      }
+    }
+
+    if(isAdmin) renderizarAdmin();
+  }
+
+  // ================= BOTONES MIS COMPRAS =================
+  function copiarCredenciales(id) {
+    const p = appData.pedidos.find(x => x.id === id);
+    if(p) {
+        navigator.clipboard.writeText(`*${p.servicio}* (${p.tipoVenta || 'Cuenta'})\n\nDatos de acceso:\n${p.credenciales}\n\nGracias por su compra.`).then(() => { alert("✅ Datos copiados al portapapeles."); });
+    }
+  }
+  function enviarWaCredenciales(id) {
+    const p = appData.pedidos.find(x => x.id === id);
+    if(p && p.clienteWa) {
+        const msj = `Hola, aquí tienes tu *${p.servicio}* (${p.tipoVenta || 'Cuenta'}).\n\nDatos de acceso:\n${p.credenciales}\n\nGracias por tu compra.`;
+        window.open(`https://wa.me/${p.clienteWa}?text=${encodeURIComponent(msj)}`, '_blank');
+    } else { alert("⚠️ No registraste un número de WhatsApp para este cliente. Usa el botón 'Copiar'."); }
+  }
+  function avisarVencimiento(id) {
+    const p = appData.pedidos.find(x => x.id === id);
+    if(p && p.clienteWa) {
+        const msj = `Hola, te recordamos que tu servicio de *${p.servicio}* está próximo a vencer. ¡Contáctanos para renovarlo!`;
+        window.open(`https://wa.me/${p.clienteWa}?text=${encodeURIComponent(msj)}`, '_blank');
+    } else { alert("⚠️ No registraste un número de WhatsApp para este cliente."); }
+  }
+
+  // ================= ASISTENTE (TICKETS) =================
+  function abrirModalSoporte(id) {
+    const p = appData.pedidos.find(x => x.id === id);
+    if(p) {
+        document.getElementById('soporte-pedido-id').value = p.id;
+        document.getElementById('soporte-servicio-nombre').innerText = p.servicio + " (" + (p.tipoVenta||'Cuenta') + ")";
+        document.getElementById('soporte-cliente-nota').innerText = "Cliente: " + (p.clienteInfo || 'N/A');
+        document.getElementById('soporte-asunto').value = '';
+        document.getElementById('soporte-mensaje').value = '';
+        document.getElementById('modal-soporte-crear').style.display = 'flex';
+    }
+  }
+  function enviarSoporte() {
+    const idPedido = parseInt(document.getElementById('soporte-pedido-id').value);
+    const asunto = document.getElementById('soporte-asunto').value.trim();
+    const msj = document.getElementById('soporte-mensaje').value.trim();
+    const p = appData.pedidos.find(x => x.id === idPedido);
+    if(!asunto || !msj) return alert("Completa asunto y mensaje.");
+    
+    const nTicket = { 
+        id: Date.now(), idPedido: idPedido, reseller: currentUser.user, 
+        servicio: p.servicio, clienteInfo: p.clienteInfo || 'N/A', 
+        asunto: asunto, mensaje: msj, fecha: new Date().toLocaleString('es-ES'), estado: 'Abierto',
+        provUser: p.provUser || 'admin'
+    };
+    appData.tickets.unshift(nTicket); sincronizarDatos();
+    document.getElementById('modal-soporte-crear').style.display = 'none'; alert("Reporte enviado al proveedor."); activarPanel('soporte');
+  }
+  function renderizarSoporteReseller() {
+    const lista = document.getElementById('lista-tickets-reseller');
+    lista.innerHTML = '';
+    const misTickets = appData.tickets.filter(t => t.reseller === currentUser.user);
+    let tAbiertos = 0; let tCerrados = 0;
+
+    misTickets.forEach(t => {
+        if(t.estado === 'Abierto') tAbiertos++; else tCerrados++;
+        const badge = t.estado === 'Abierto' ? `<span class="badge badge-warning">Abierto</span>` : `<span class="badge badge-active">Cerrado</span>`;
+        lista.innerHTML += `
+        <div class="ticket-card">
+            <div class="info">
+                <h4>${badge} ${t.asunto}</h4>
+                <p>👤 Cliente: ${t.clienteInfo} | 📺 ${t.servicio} | 🕒 ${t.fecha}</p>
+                <div style="background:rgba(0,0,0,0.5); padding:10px; border-radius:8px; margin-top:10px; font-size:0.85rem; color:#fff;">"${t.mensaje}"</div>
+            </div>
+            <div class="actions">
+                <button class="btn-secondary" style="border-color:var(--info); color:var(--info);" onclick="window.open('https://wa.me/${appData.config.whatsapp}?text=Hola, sobre el reporte: ${t.asunto}...', '_blank')">📱 Escribir Admin WA</button>
+            </div>
+        </div>`;
+    });
+    document.getElementById('ticket-total').innerText = misTickets.length;
+    document.getElementById('ticket-abiertos').innerText = tAbiertos;
+    document.getElementById('ticket-cerrados').innerText = tCerrados;
+  }
+
+  function renderizarSoporteProv() {
+    const lstSoporte = document.getElementById('lista-tickets-prov');
+    lstSoporte.innerHTML = '';
+    const misTicketsProv = appData.tickets.filter(t => t.provUser === currentUser.user);
+    
+    if(misTicketsProv.length === 0) lstSoporte.innerHTML = `<p style="text-align:center; color:var(--text-muted);">No hay tickets de asistencia para tus cuentas.</p>`;
+    
+    misTicketsProv.forEach(t => {
+        const badge = t.estado === 'Abierto' ? `<span class="badge badge-warning">Abierto</span>` : `<span class="badge badge-active">Cerrado</span>`;
+        const resellerObj = appData.resellers.find(r => r.user === t.reseller);
+        const rPhone = resellerObj ? resellerObj.phone : '';
+        let actBtns = `<button class="btn-secondary" style="border-color:var(--success); color:var(--success);" onclick="window.open('https://wa.me/${rPhone}?text=Hola ${t.reseller}, sobre tu reporte: ${t.asunto}...', '_blank')">📱 Responder WA</button>`;
+        if(t.estado === 'Abierto') { actBtns += `<button class="btn-success" style="margin-left:5px;" onclick="cerrarTicket(${t.id})">✔ Marcar Solucionado</button>`; }
+
+        lstSoporte.innerHTML += `
+        <div class="ticket-card" style="background:rgba(0,0,0,0.3);">
+            <div class="info">
+                <h4>${badge} ${t.asunto}</h4>
+                <p>🙋‍♂️ Reseller: ${t.reseller} | 👤 Cliente Final: ${t.clienteInfo} | 📺 ${t.servicio}</p>
+                <div style="background:rgba(0,0,0,0.5); padding:10px; border-radius:8px; margin-top:10px; font-size:0.85rem; color:#fff;">"${t.mensaje}"</div>
+            </div>
+            <div class="actions">${actBtns}</div>
+        </div>`;
+    });
+  }
+
+  // ================= RECARGAS =================
+  function solicitarRecarga() {
+    const metodo = document.getElementById('form-recarga-metodo').value;
+    const monto = parseFloat(document.getElementById('form-recarga-monto').value);
+    const comprobante = document.getElementById('form-recarga-comprobante').value.trim();
+    if(isNaN(monto) || monto <= 0) { alert("Ingresa un monto válido mayor a 0."); return; }
+
+    appData.recargas.unshift({ id: Date.now(), reseller: currentUser.user, fecha: new Date().toLocaleString('es-ES'), metodo: metodo, monto: monto, comprobante: comprobante, estado: 'Pendiente' });
+    sincronizarDatos();
+    document.getElementById('form-recarga-monto').value = ''; document.getElementById('form-recarga-comprobante').value = '';
+    alert("Solicitud de recarga enviada. Espera la aprobación.");
+  }
+  function renderizarRecargasReseller() {
+    const tb = document.getElementById('tabla-recargas-reseller');
+    tb.innerHTML = '';
+    const misR = appData.recargas.filter(r => r.reseller === currentUser.user);
+    misR.forEach(r => {
+      let bClass = r.estado === 'Pendiente' ? 'badge-warning' : (r.estado === 'Aprobada' ? 'badge-active' : 'badge-expired');
+      tb.innerHTML += `<tr><td>${r.fecha}</td><td>${r.metodo}</td><td style="color:var(--success); font-weight:bold;">USD $${parseFloat(r.monto).toFixed(2)}</td><td><span class="badge ${bClass}">${r.estado}</span></td></tr>`;
+    });
+  }
+
+  // ================= STORE Y COMPRA =================
+  function filtrarTienda(cat) {
+    catActual = cat;
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('cat-' + cat).classList.add('active');
+    
+    const tc = parseFloat(appData.config.tipoCambio || 3.75);
+    const cont = document.getElementById('grid-tienda');
+    cont.innerHTML = '';
+    const items = appData.cuentas.filter(c => c.categoria === cat);
+    
+    items.forEach(c => {
+      let img = c.img || 'https://via.placeholder.com/600x400/1a0202/ff3333.png?text=Sin+Imagen';
+      let stockNum = parseInt(c.stock) || 0;
+      let isSoldOut = stockNum <= 0;
+      let cardClass = isSoldOut ? "product-card sold-out" : "product-card";
+      let btnHtml = isSoldOut ? `<button class="btn-primary" disabled>Agotado</button>` : `<button class="btn-primary" style="padding:6px 12px; font-size:0.85rem;" onclick="abrirModalCompra(${c.id})">Comprar</button>`;
+      let badgeHtml = isSoldOut ? `<div class="stock-badge empty">Agotado</div>` : `<div class="stock-badge">Stock: ${stockNum}</div>`;
+      
+      let pNick = c.proveedorNick || appData.config.adminNick || 'Admin';
+      let pLogo = c.proveedorLogo || appData.config.adminLogo || 'https://via.placeholder.com/50x50/ff002b/fff.png?text=A';
+
+      let priceUSD = parseFloat(c.precio).toFixed(2);
+      let pricePEN = (parseFloat(c.precio) * tc).toFixed(2);
+      
+      let tipoBadge = c.tipoVenta === 'Perfil' ? '<span class="badge badge-tipo-perfil" style="width:fit-content;">Solo Perfil</span>' : '<span class="badge badge-tipo-completa" style="width:fit-content;">Cuenta Completa</span>';
+
+      cont.innerHTML += `
+        <div class="${cardClass}">
+          ${badgeHtml}
+          <img src="${img}" class="prod-img">
+          <div class="seller-tag"><img src="${pLogo}"> <span>${pNick}</span></div>
+          <div class="title">${c.nombre} ${tipoBadge}</div>
+          <div class="provider" style="white-space: pre-wrap;">${c.desc}</div>
+          <div class="footer">
+            <span class="price">
+              USD $${priceUSD}
+              <span style="color:var(--soles); font-size:0.85rem; font-weight:bold;">S/ ${pricePEN}</span>
+            </span>
+            ${btnHtml}
+          </div>
+        </div>`;
+    });
+  }
+
+  function abrirModalCompra(id) {
+    itemCompraTemp = appData.cuentas.find(c => c.id === id);
+    if(!itemCompraTemp || itemCompraTemp.stock <= 0) return;
+    
+    const tc = parseFloat(appData.config.tipoCambio || 3.75);
+    let priceUSD = parseFloat(itemCompraTemp.precio).toFixed(2);
+    let pricePEN = (parseFloat(itemCompraTemp.precio) * tc).toFixed(2);
+    
+    document.getElementById('compra-titulo').innerText = itemCompraTemp.nombre;
+    let tipoBadge = itemCompraTemp.tipoVenta === 'Perfil' ? '<span class="badge badge-tipo-perfil">Comprando: Solo Perfil</span>' : '<span class="badge badge-tipo-completa">Comprando: Cuenta Completa</span>';
+    document.getElementById('compra-tipo-badge').innerHTML = tipoBadge;
+    
+    document.getElementById('compra-precio').innerHTML = `<span style="font-size:2.2rem; color:var(--success);">USD $${priceUSD}</span> <span style="font-size:1.2rem; color:var(--soles); display:block; margin-top:5px;">PEN S/ ${pricePEN}</span>`;
+    
+    document.getElementById('compra-cliente').value = '';
+    document.getElementById('compra-wa').value = '';
+    document.getElementById('modal-compra').style.display = 'flex';
+  }
+  
+  function cerrarModalCompra() { document.getElementById('modal-compra').style.display = 'none'; }
+
+  function procesarCompra() {
+    const precioItem = parseFloat(itemCompraTemp.precio);
+    if((parseFloat(currentUser.saldo) || 0) < precioItem) {
+      alert("⚠️ Créditos insuficientes para procesar la compra. Realiza una recarga."); return;
+    }
+
+    const clienteNota = document.getElementById('compra-cliente').value.trim();
+    const clienteWaCod = document.getElementById('compra-cod-pais').value;
+    const clienteWaNum = document.getElementById('compra-wa').value.trim();
+    let clienteFullWa = clienteWaNum !== "" ? clienteWaCod + clienteWaNum : "";
+    
+    const idxRes = appData.resellers.findIndex(r => r.user === currentUser.user);
+    appData.resellers[idxRes].saldo = parseFloat(appData.resellers[idxRes].saldo) - precioItem;
+    
+    const timestampActual = Date.now();
+    
+    // TOMA LA PRIMERA LÍNEA DE LAS CREDENCIALES
+    let credsArray = (itemCompraTemp.credenciales || '').split('\n').filter(line => line.trim() !== '');
+    let credencialEntregada = credsArray.shift() || 'Contactar a soporte para credenciales';
+
+    const nuevoPedido = {
+      id: timestampActual, timestamp: timestampActual,
+      reseller: currentUser.user, 
+      clienteInfo: clienteNota,
+      clienteWa: clienteFullWa,
+      fecha: new Date().toLocaleDateString('es-ES'),
+      servicio: itemCompraTemp.nombre,
+      tipoVenta: itemCompraTemp.tipoVenta || 'Cuenta Completa',
+      precio: precioItem,
+      credenciales: credencialEntregada,
+      provUser: itemCompraTemp.proveedorUser || 'admin'
+    };
+    
+    appData.pedidos.unshift(nuevoPedido);
+    
+    const idxItem = appData.cuentas.findIndex(c => c.id === itemCompraTemp.id);
+    if(idxItem !== -1) { 
+        appData.cuentas[idxItem].credenciales = credsArray.join('\n');
+        appData.cuentas[idxItem].stock = credsArray.length;
+    }
+
+    sincronizarDatos(); cerrarModalCompra();
+
+    document.getElementById('exito-credenciales').innerText = credencialEntregada;
+    document.getElementById('modal-exito').style.display = 'flex';
+
+    if(clienteFullWa !== "") {
+        const msj = `Hola, aquí tienes tu *${itemCompraTemp.nombre}* (${itemCompraTemp.tipoVenta || 'Cuenta'}).\n\nDatos de acceso:\n${credencialEntregada}\n\nGracias por tu compra.`;
+        window.open(`https://wa.me/${clienteFullWa}?text=${encodeURIComponent(msj)}`, '_blank');
+    }
+  }
+
+  // ================= PROVEEDORES (MI STOCK) =================
+  function guardarCuentaProv() {
+    const idInput = document.getElementById('edit-prov-id').value;
+    const nombre = document.getElementById('form-prov-nombre').value;
+    const precio = document.getElementById('form-prov-precio').value;
+    const tipoVenta = document.getElementById('form-prov-tipo-venta').value;
+    const desc = document.getElementById('form-prov-desc').value;
+    const img = document.getElementById('form-prov-img').value;
+    const categoria = document.getElementById('form-prov-categoria').value;
+    const creds = document.getElementById('form-prov-credenciales').value;
+    
+    const credsArr = creds.split('\n').filter(x => x.trim() !== '');
+    const stock = credsArr.length;
+    
+    if(!nombre || !precio) return alert("Faltan datos obligatorios (Nombre, Precio)");
+    if(stock === 0) return alert("Debes ingresar al menos una línea en Detalles de Entrega.");
+
+    if (idInput) {
+      const idx = appData.cuentas.findIndex(c => c.id == idInput && c.proveedorUser === currentUser.user);
+      if (idx !== -1) {
+          appData.cuentas[idx] = { ...appData.cuentas[idx], nombre, precio, tipoVenta, stock, desc, img, categoria, credenciales: creds };
+      }
+    } else {
+      const nId = appData.cuentas.length > 0 ? Math.max(...appData.cuentas.map(c => c.id)) + 1 : 1;
+      appData.cuentas.push({ 
+          id: nId, nombre, precio, tipoVenta, stock, desc, img, categoria, credenciales: creds, 
+          proveedorUser: currentUser.user, proveedorNick: currentUser.nickname || currentUser.user, proveedorLogo: currentUser.logoUrl || '' 
+      });
+    }
+    sincronizarDatos(); cancelarEdicionProv();
+  }
+
+  function editarCuentaProv(id) {
+    const c = appData.cuentas.find(x => x.id == id && x.proveedorUser === currentUser.user);
+    if(c) {
+      document.getElementById('edit-prov-id').value = c.id;
+      document.getElementById('form-prov-nombre').value = c.nombre;
+      document.getElementById('form-prov-precio').value = c.precio;
+      document.getElementById('form-prov-tipo-venta').value = c.tipoVenta || 'Cuenta Completa';
+      document.getElementById('form-prov-desc').value = c.desc;
+      document.getElementById('form-prov-img').value = c.img;
+      document.getElementById('form-prov-categoria').value = c.categoria;
+      document.getElementById('form-prov-credenciales').value = c.credenciales || "";
+      document.getElementById('calc-stock-prov').innerText = c.stock || 0;
+      
+      document.getElementById('btn-save-prov').innerText = "Guardar Cambios";
+      document.getElementById('btn-cancel-prov').style.display = "inline-block";
+      window.scrollTo(0,0);
+    }
+  }
+  
+  function cancelarEdicionProv() {
+    document.getElementById('edit-prov-id').value = ''; document.getElementById('form-prov-nombre').value = '';
+    document.getElementById('form-prov-precio').value = ''; document.getElementById('form-prov-tipo-venta').value = 'Cuenta Completa'; 
+    document.getElementById('form-prov-desc').value = ''; document.getElementById('form-prov-img').value = ''; document.getElementById('form-prov-credenciales').value = '';
+    document.getElementById('calc-stock-prov').innerText = '0';
+    document.getElementById('btn-save-prov').innerText = "Publicar en Store";
+    document.getElementById('btn-cancel-prov').style.display = "none";
+  }
+  
+  function eliminarCuentaProv(id) {
+    if(confirm("¿Borrar servicio de la store?")) { appData.cuentas = appData.cuentas.filter(c => !(c.id == id && c.proveedorUser === currentUser.user)); sincronizarDatos(); }
+  }
+
+  function renderizarMiStockProv() {
+      const tb = document.getElementById('tabla-mistock');
+      tb.innerHTML = '';
+      const misCuentas = appData.cuentas.filter(c => c.proveedorUser === currentUser.user);
+      misCuentas.forEach(c => {
+          let stockColor = c.stock > 0 ? 'var(--success)' : 'var(--accent-primary)';
+          let tipoBadge = c.tipoVenta === 'Perfil' ? '<span class="badge badge-tipo-perfil">Perfil</span>' : '<span class="badge badge-tipo-completa">C. Completa</span>';
+          
+          tb.innerHTML += `<tr>
+            <td><strong>${c.nombre}</strong></td>
+            <td>${tipoBadge}</td>
+            <td>$${parseFloat(c.precio).toFixed(2)}</td>
+            <td style="color:${stockColor}; font-weight:bold;">${c.stock}</td>
+            <td><div style="max-height:60px; overflow-y:auto; font-size:0.8rem; font-family:monospace; color:var(--text-muted);">${c.credenciales ? c.credenciales.replace(/\n/g, '<br>') : 'N/A'}</div></td>
+            <td style="min-width:140px;">
+              <button class="btn-action edit" onclick="editarCuentaProv(${c.id})">Edit</button>
+              <button class="btn-action delete" onclick="eliminarCuentaProv(${c.id})">Del</button>
+            </td>
+          </tr>`;
+      });
+      
+      // Ventas del proveedor
+      const tbVentas = document.getElementById('tabla-ventas-prov');
+      if(tbVentas) {
+          tbVentas.innerHTML = '';
+          const misVentas = appData.pedidos.filter(p => p.provUser === currentUser.user);
+          if(misVentas.length === 0) {
+              tbVentas.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Aún no tienes ventas registradas.</td></tr>`;
+          }
+          misVentas.forEach(p => {
+              let tipoBadge = p.tipoVenta === 'Perfil' ? '<span class="badge badge-tipo-perfil">Perfil</span>' : '<span class="badge badge-tipo-completa">C. Completa</span>';
+              tbVentas.innerHTML += `<tr>
+                <td><strong>${p.reseller}</strong></td>
+                <td>${p.servicio}</td>
+                <td>${tipoBadge}</td>
+                <td><div style="background:rgba(0,0,0,0.5); padding:5px; border-radius:5px; font-family:monospace; font-size:0.8rem; color:var(--success); border:1px solid rgba(0,255,127,0.2); white-space:pre-wrap;">${p.credenciales}</div></td>
+                <td>${p.fecha}</td>
+                <td><button class="btn-action edit" onclick="editarCredencialPedido(${p.id})">✏️ Editar Datos</button></td>
+              </tr>`;
+          });
+      }
+  }
+
+  // ================= ADMIN PANEL =================
+  function pedirPasswordAdmin() { 
+      document.getElementById('admin-pass-input').value = ''; 
+      document.getElementById('modal-admin').style.display = 'flex'; 
+      setTimeout(() => document.getElementById('admin-pass-input').focus(), 100);
+  }
+  
+  function verificarAdmin() {
+    const p = document.getElementById('admin-pass-input').value;
+    if(p === appData.config.password) {
+      isAdmin = true;
+      document.getElementById('modal-admin').style.display = 'none';
+      document.getElementById('auth-screen').style.display = 'none';
+      document.getElementById('app-container').style.display = 'flex';
+      document.getElementById('nav-admin').style.display = 'flex';
+      
+      document.querySelectorAll('.nav-admin-prov-only').forEach(el => el.style.display = 'flex');
+
+      if(!currentUser) {
+          document.querySelectorAll('.nav-reseller-only').forEach(el => el.style.display = 'none');
+          document.querySelectorAll('.nav-proveedor-only').forEach(el => el.style.display = 'none');
+          document.getElementById('nav-dashboard').style.display = 'none'; 
+          document.getElementById('box-creditos').style.display = 'none';
+          document.getElementById('lbl-user-name').innerText = appData.config.adminNick || "Admin";
+          document.getElementById('lbl-user-email').innerText = "Modo Administrador";
+          document.getElementById('lbl-avatar').innerText = "👑";
+      }
+      
+      activarPanel('admin');
+      renderizarAdmin();
+    } else { alert("Clave incorrecta"); }
+  }
+
+  function renderizarAdmin() {
+    // 0. Solicitudes de Registro Pendientes
+    const tbReg = document.getElementById('tabla-registros-admin');
+    tbReg.innerHTML = '';
+    const pendRegs = appData.resellers.filter(r => r.estado === 'Pendiente');
+    if(pendRegs.length === 0) tbReg.innerHTML = `<tr><td colspan="4" style="text-align:center;">No hay solicitudes de registro.</td></tr>`;
+    pendRegs.forEach(r => {
+      tbReg.innerHTML += `<tr>
+        <td>${r.fechaReg || ''}</td>
+        <td><strong>${r.user}</strong><br><small>${r.email}</small></td>
+        <td><a href="https://wa.me/${r.phone}" target="_blank" style="color:var(--success)">${r.phone}</a></td>
+        <td>
+          <button class="btn-success" onclick="aprobarRegistro('${r.user}', true)">Aprobar</button>
+          <button class="btn-secondary" style="border-color:var(--accent-primary); color:var(--accent-primary); padding: 6px 12px; margin-top:5px;" onclick="aprobarRegistro('${r.user}', false)">Rechazar</button>
+        </td>
+      </tr>`;
+    });
+
+    // 1. Recargas Pendientes
+    const tbRec = document.getElementById('tabla-recargas-admin');
+    tbRec.innerHTML = '';
+    const pend = appData.recargas.filter(r => r.estado === 'Pendiente');
+    if(pend.length === 0) tbRec.innerHTML = `<tr><td colspan="5" style="text-align:center;">No hay solicitudes pendientes.</td></tr>`;
+    pend.forEach(r => {
+      tbRec.innerHTML += `<tr>
+        <td>${r.fecha}</td>
+        <td><strong>${r.reseller}</strong><br><small>Comp: ${r.comprobante||'N/A'}</small></td>
+        <td>${r.metodo}</td>
+        <td style="color:var(--success); font-weight:bold;">$${parseFloat(r.monto).toFixed(2)}</td>
+        <td>
+          <button class="btn-success" onclick="aprobarRecarga(${r.id}, true)">Aprobar</button>
+          <button class="btn-secondary" style="border-color:var(--accent-primary); color:var(--accent-primary); padding: 6px 12px; margin-top:5px;" onclick="aprobarRecarga(${r.id}, false)">Rechazar</button>
+        </td>
+      </tr>`;
+    });
+
+    // 2. Tickets Soporte (Admin)
+    const lstSoporte = document.getElementById('lista-tickets-admin');
+    lstSoporte.innerHTML = '';
+    const misTicketsAd = appData.tickets || [];
+    if(misTicketsAd.length === 0) lstSoporte.innerHTML = `<p style="text-align:center; color:var(--text-muted);">No hay tickets de asistencia.</p>`;
+    misTicketsAd.forEach(t => {
+        const badge = t.estado === 'Abierto' ? `<span class="badge badge-warning">Abierto</span>` : `<span class="badge badge-active">Cerrado</span>`;
+        const resellerObj = appData.resellers.find(r => r.user === t.reseller);
+        const rPhone = resellerObj ? resellerObj.phone : '';
+        let actBtns = `<button class="btn-secondary" style="border-color:var(--success); color:var(--success);" onclick="window.open('https://wa.me/${rPhone}?text=Hola ${t.reseller}, sobre tu reporte: ${t.asunto}...', '_blank')">📱 Responder WA</button>`;
+        if(t.estado === 'Abierto') { actBtns += `<button class="btn-success" style="margin-left:5px;" onclick="cerrarTicket(${t.id})">✔ Cerrar</button>`; }
+
+        lstSoporte.innerHTML += `
+        <div class="ticket-card" style="background:rgba(0,0,0,0.3);">
+            <div class="info">
+                <h4>${badge} ${t.asunto}</h4>
+                <p>🙋‍♂️ Usuario: ${t.reseller} | 👤 Cliente Final: ${t.clienteInfo} | 📺 ${t.servicio}</p>
+                <div style="background:rgba(0,0,0,0.5); padding:10px; border-radius:8px; margin-top:10px; font-size:0.85rem; color:#fff;">"${t.mensaje}"</div>
+            </div>
+            <div class="actions">${actBtns}</div>
+        </div>`;
+    });
+    
+    // 3. Compras Globales (Resellers)
+    const tbComp = document.getElementById('tabla-compras-admin');
+    tbComp.innerHTML = '';
+    const ahora = Date.now();
+    const unMesMs = 30 * 24 * 60 * 60 * 1000;
+    appData.pedidos.forEach(p => {
+        const tiempoPasado = ahora - p.timestamp;
+        const diasRestantes = Math.ceil((unMesMs - tiempoPasado) / (1000 * 60 * 60 * 24));
+        let badge = diasRestantes > 0 ? `<span style="color:var(--success)">${diasRestantes} días</span>` : `<span style="color:var(--accent-primary)">Vencida</span>`;
+        let tipoBadge = p.tipoVenta === 'Perfil' ? '<span class="badge badge-tipo-perfil">Perfil</span>' : '<span class="badge badge-tipo-completa">C. Completa</span>';
+
+        tbComp.innerHTML += `<tr>
+          <td><strong>${p.reseller}</strong></td>
+          <td>${p.servicio}</td>
+          <td>${tipoBadge}</td>
+          <td><div style="background:rgba(0,0,0,0.5); padding:5px; border-radius:5px; font-family:monospace; font-size:0.8rem; color:var(--success); border:1px solid rgba(0,255,127,0.2); white-space:pre-wrap;">${p.credenciales}</div></td>
+          <td>${p.fecha}</td>
+          <td>${badge}</td>
+          <td><button class="btn-action edit" onclick="editarCredencialPedido(${p.id})">✏️ Editar Datos</button></td>
+        </tr>`;
+    });
+
+    // 4. Usuarios List (Solo aprobados)
+    const tbRes = document.getElementById('tabla-resellers');
+    tbRes.innerHTML = '';
+    appData.resellers.filter(r => r.estado !== 'Pendiente').forEach(r => {
+      let rBadge = r.role === 'proveedor' ? `<span class="badge badge-warning">Proveedor</span>` : `<span class="badge badge-active">Reseller</span>`;
+      tbRes.innerHTML += `<tr>
+        <td><strong>${r.user}</strong></td>
+        <td>${rBadge}</td>
+        <td style="color:var(--success); font-weight:bold; font-size:1.1rem;">$${parseFloat(r.saldo||0).toFixed(2)}</td>
+        <td><small style="color:var(--text-muted)">${r.pass}</small></td>
+        <td style="min-width: 140px;">
+          <button class="btn-action edit" onclick="editarReseller('${r.user}')">Edit</button>
+          <button class="btn-action delete" onclick="eliminarReseller('${r.user}')">Del</button>
+        </td>
+      </tr>`;
+    });
+
+    // 5. Stock Actual
+    const tbStock = document.getElementById('tabla-stock-admin');
+    tbStock.innerHTML = '';
+    appData.cuentas.forEach(c => {
+      let stockColor = c.stock > 0 ? 'var(--success)' : 'var(--accent-primary)';
+      let tipoBadge = c.tipoVenta === 'Perfil' ? '<span class="badge badge-tipo-perfil">Perfil</span>' : '<span class="badge badge-tipo-completa">C. Completa</span>';
+      
+      tbStock.innerHTML += `<tr>
+        <td><strong>${c.nombre}</strong></td>
+        <td>${tipoBadge}</td>
+        <td>$${parseFloat(c.precio).toFixed(2)}</td>
+        <td style="color:${stockColor}; font-weight:bold; font-size:1.1rem;">${c.stock}</td>
+        <td><div style="max-height:60px; overflow-y:auto; font-size:0.8rem; font-family:monospace; color:var(--text-muted);">${c.credenciales ? c.credenciales.replace(/\n/g, '<br>') : 'N/A'}</div></td>
+        <td><span class="badge badge-active">${c.proveedorNick || 'Admin'}</span></td>
+        <td style="min-width:140px;">
+          <button class="btn-action edit" onclick="editarCuenta(${c.id})">Edit</button>
+          <button class="btn-action delete" onclick="eliminarCuenta(${c.id})">Del</button>
+        </td>
+      </tr>`;
+    });
+  }
+
+  function aprobarRegistro(user, aprueba) {
+      const idx = appData.resellers.findIndex(r => r.user === user);
+      if(idx === -1) return;
+      if(aprueba) {
+          appData.resellers[idx].estado = 'Aprobado';
+      } else {
+          appData.resellers.splice(idx, 1);
+      }
+      sincronizarDatos();
+  }
+
+  function aprobarRecarga(id, aprueba) {
+    const idx = appData.recargas.findIndex(r => r.id === id);
+    if(idx === -1) return;
+    if(aprueba) {
+      appData.recargas[idx].estado = 'Aprobada';
+      const userIdx = appData.resellers.findIndex(u => u.user === appData.recargas[idx].reseller);
+      if(userIdx !== -1) { appData.resellers[userIdx].saldo = (parseFloat(appData.resellers[userIdx].saldo) || 0) + parseFloat(appData.recargas[idx].monto); }
+    } else { appData.recargas[idx].estado = 'Rechazada'; }
+    sincronizarDatos();
+  }
+
+  function cerrarTicket(id) {
+    const idx = appData.tickets.findIndex(t => t.id === id);
+    if(idx !== -1) { appData.tickets[idx].estado = 'Cerrado'; sincronizarDatos(); }
+  }
+
+  function guardarConfiguracion() {
+    appData.config.qrUrl = document.getElementById('config-qr').value.trim();
+    appData.config.whatsapp = document.getElementById('config-whatsapp').value.trim();
+    appData.config.binanceId = document.getElementById('config-binance-id').value.trim();
+    appData.config.binanceUser = document.getElementById('config-binance-user').value.trim();
+    appData.config.logoSidebar = document.getElementById('config-logo-sidebar').value.trim();
+    appData.config.logoCenter = document.getElementById('config-logo-center').value.trim();
+    appData.config.adminNick = document.getElementById('config-admin-nick').value.trim();
+    appData.config.adminLogo = document.getElementById('config-admin-logo').value.trim();
+    
+    // Guardar nuevo tipo de cambio
+    const nuevoTipoCambio = parseFloat(document.getElementById('config-tipo-cambio').value);
+    if(!isNaN(nuevoTipoCambio) && nuevoTipoCambio > 0) {
+        appData.config.tipoCambio = nuevoTipoCambio;
+    }
+
+    const p = document.getElementById('config-pass').value.trim();
+    if(p) appData.config.password = p;
+    sincronizarDatos();
+    aplicarConfiguracionGrafica();
+    alert("Configuración Admin Guardada");
+  }
+
+  // --- FUNCIÓN PARA EDITAR CREDENCIAL DE UN PEDIDO YA VENDIDO ---
+  function editarCredencialPedido(id) {
+    const p = appData.pedidos.find(x => x.id === id);
+    if (p) {
+      const nuevaCred = prompt("Edita las credenciales entregadas a este reseller:", p.credenciales);
+      if (nuevaCred !== null && nuevaCred.trim() !== "") {
+        p.credenciales = nuevaCred;
+        sincronizarDatos();
+        alert("✅ Credenciales actualizadas. El cambio ya se refleja en el panel del reseller.");
+      }
+    }
+  }
+
+  // --- GESTIÓN DE USUARIOS (ADMIN) ---
+  function guardarResellerAdmin() {
+    const originalUser = document.getElementById('edit-reseller-original').value;
+    const user = document.getElementById('admin-reg-user').value.trim();
+    const email = document.getElementById('admin-reg-email').value.trim();
+    const phone = document.getElementById('admin-reg-phone').value.trim();
+    const pass = document.getElementById('admin-reg-pass').value.trim();
+    const saldo = parseFloat(document.getElementById('admin-reg-saldo').value) || 0;
+    const role = document.getElementById('admin-reg-rol').value;
+    const nickname = document.getElementById('admin-reg-nickname').value.trim();
+    const logoUrl = document.getElementById('admin-reg-logo').value.trim();
+
+    if(!user || !pass) return alert("El Usuario y la Contraseña son obligatorios.");
+
+    if (originalUser) {
+        const idx = appData.resellers.findIndex(r => r.user === originalUser);
+        if(idx !== -1) {
+            if(user !== originalUser && appData.resellers.find(r => r.user.toLowerCase() === user.toLowerCase())) { return alert("El nombre de usuario ya está registrado."); }
+            appData.resellers[idx] = { ...appData.resellers[idx], user, email, phone, pass, saldo, role, nickname, logoUrl, estado: 'Aprobado' };
+            if(user !== originalUser) {
+                appData.pedidos.forEach(p => { if(p.reseller === originalUser) p.reseller = user; });
+                appData.recargas.forEach(r => { if(r.reseller === originalUser) r.reseller = user; });
+                appData.tickets.forEach(t => { if(t.reseller === originalUser) t.reseller = user; });
+                appData.cuentas.forEach(c => { if(c.proveedorUser === originalUser) c.proveedorUser = user; });
+            }
+        }
+    } else {
+        if(appData.resellers.find(r => r.user.toLowerCase() === user.toLowerCase())) return alert("El usuario ya existe.");
+        appData.resellers.push({ user, email, phone, pass, saldo, role, nickname, logoUrl, estado: 'Aprobado', fechaReg: new Date().toLocaleDateString() });
+    }
+    sincronizarDatos(); cancelarEdicionReseller();
+  }
+
+  function editarReseller(user) {
+    const r = appData.resellers.find(x => x.user === user);
+    if(r) {
+        document.getElementById('edit-reseller-original').value = r.user;
+        document.getElementById('admin-reg-user').value = r.user;
+        document.getElementById('admin-reg-email').value = r.email || "";
+        document.getElementById('admin-reg-phone').value = r.phone || "";
+        document.getElementById('admin-reg-pass').value = r.pass || "";
+        document.getElementById('admin-reg-saldo').value = r.saldo || 0;
+        document.getElementById('admin-reg-rol').value = r.role || "reseller";
+        document.getElementById('admin-reg-nickname').value = r.nickname || "";
+        document.getElementById('admin-reg-logo').value = r.logoUrl || "";
+        
+        toggleProvFields();
+        
+        document.getElementById('form-reseller-title').innerText = "Editando Usuario: " + r.user;
+        document.getElementById('btn-save-reseller').innerText = "Guardar Cambios";
+        document.getElementById('btn-cancel-reseller').style.display = "inline-block";
+        window.scrollTo(0, document.getElementById('form-reseller-title').offsetTop - 50);
+    }
+  }
+
+  function cancelarEdicionReseller() {
+    document.getElementById('edit-reseller-original').value = '';
+    document.getElementById('admin-reg-user').value = '';
+    document.getElementById('admin-reg-email').value = '';
+    document.getElementById('admin-reg-phone').value = '';
+    document.getElementById('admin-reg-pass').value = '';
+    document.getElementById('admin-reg-saldo').value = '0.00';
+    document.getElementById('admin-reg-rol').value = 'reseller';
+    document.getElementById('admin-reg-nickname').value = '';
+    document.getElementById('admin-reg-logo').value = '';
+    toggleProvFields();
+    
+    document.getElementById('form-reseller-title').innerText = "Agregar / Editar Usuario";
+    document.getElementById('btn-save-reseller').innerText = "Crear Usuario";
+    document.getElementById('btn-cancel-reseller').style.display = "none";
+  }
+
+  function eliminarReseller(user) {
+    if(confirm(`¿Eliminar permanentemente al usuario '${user}'?`)) {
+        appData.resellers = appData.resellers.filter(r => r.user !== user);
+        sincronizarDatos();
+    }
+  }
+
+  // --- GESTIÓN DE CUENTAS (ADMIN) ---
+  function guardarCuenta() {
+    const idInput = document.getElementById('edit-id').value;
+    const nombre = document.getElementById('form-nombre').value;
+    const precio = document.getElementById('form-precio').value;
+    const tipoVenta = document.getElementById('form-tipo-venta').value;
+    const desc = document.getElementById('form-desc').value;
+    const img = document.getElementById('form-img').value;
+    const categoria = document.getElementById('form-categoria').value;
+    const creds = document.getElementById('form-credenciales').value;
+    
+    const credsArr = creds.split('\n').filter(x => x.trim() !== '');
+    const stock = credsArr.length;
+    
+    if(!nombre || !precio) return alert("Faltan datos obligatorios (Nombre o Precio)");
+    if(stock === 0) return alert("Debes ingresar al menos una línea en Detalles de Entrega.");
+
+    if (idInput) {
+      const idx = appData.cuentas.findIndex(c => c.id == idInput);
+      if (idx !== -1) appData.cuentas[idx] = { ...appData.cuentas[idx], nombre, precio, tipoVenta, stock, desc, img, categoria, credenciales: creds };
+    } else {
+      const nId = appData.cuentas.length > 0 ? Math.max(...appData.cuentas.map(c => c.id)) + 1 : 1;
+      appData.cuentas.push({ 
+          id: nId, nombre, precio, tipoVenta, stock, desc, img, categoria, credenciales: creds,
+          proveedorUser: 'admin', proveedorNick: appData.config.adminNick || 'Admin', proveedorLogo: appData.config.adminLogo || ''
+      });
+    }
+    sincronizarDatos(); cancelarEdicion();
+  }
+
+  function editarCuenta(id) {
+    const c = appData.cuentas.find(x => x.id == id);
+    if(c) {
+      document.getElementById('edit-id').value = c.id;
+      document.getElementById('form-nombre').value = c.nombre;
+      document.getElementById('form-precio').value = c.precio;
+      document.getElementById('form-tipo-venta').value = c.tipoVenta || 'Cuenta Completa';
+      document.getElementById('form-desc').value = c.desc;
+      document.getElementById('form-img').value = c.img;
+      document.getElementById('form-categoria').value = c.categoria;
+      document.getElementById('form-credenciales').value = c.credenciales || "";
+      document.getElementById('calc-stock-admin').innerText = c.stock || 0;
+      
+      document.getElementById('btn-save').innerText = "Guardar Cambios";
+      document.getElementById('btn-cancel').style.display = "inline-block";
+      window.scrollTo(0, document.getElementById('form-title').offsetTop - 50);
+    }
+  }
+  
+  function cancelarEdicion() {
+    document.getElementById('edit-id').value = ''; document.getElementById('form-nombre').value = '';
+    document.getElementById('form-precio').value = ''; document.getElementById('form-tipo-venta').value = 'Cuenta Completa'; 
+    document.getElementById('form-desc').value = ''; document.getElementById('form-img').value = ''; document.getElementById('form-credenciales').value = '';
+    document.getElementById('calc-stock-admin').innerText = '0';
+    document.getElementById('btn-save').innerText = "Publicar Cuenta en Store";
+    document.getElementById('btn-cancel').style.display = "none";
+  }
+  
+  function eliminarCuenta(id) {
+    if(confirm("¿Borrar servicio del stock permanentemente?")) { appData.cuentas = appData.cuentas.filter(c => c.id != id); sincronizarDatos(); }
+  }
+</script>
+</body>
+</html>
